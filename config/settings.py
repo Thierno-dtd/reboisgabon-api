@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     # Apps
     'apps.accounts.apps.AccountsConfig',
     'apps.reforestation',
+    'apps.dashboard',
+    
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
