@@ -1,0 +1,12 @@
+[
+  {"model": "reforestation.essence", "pk": "11111111-1111-1111-1111-111111111111",
+   "fields": {"nom": "Okoumé", "nom_scientifique": "Aucoumea klaineana", "croissance_rapide": true}},
+  {"model": "reforestation.essence", "pk": "22222222-2222-2222-2222-222222222222",
+   "fields": {"nom": "Moabi", "nom_scientifique": "Baillonella toxisperma", "croissance_rapide": false}},
+  {"model": "reforestation.essence", "pk": "33333333-3333-3333-3333-333333333333",
+   "fields": {"nom": "Padouk", "nom_scientifique": "Pterocarpus soyauxii", "croissance_rapide": false}},
+  {"model": "reforestation.essence", "pk": "44444444-4444-4444-4444-444444444444",
+   "fields": {"nom": "Kevazingo", "nom_scientifique": "Guibourtia tessmannii", "croissance_rapide": false}},
+  {"model": "reforestation.essence", "pk": "55555555-5555-5555-5555-555555555555",
+   "fields": {"nom": "Eucalyptus", "nom_scientifique": "Eucalyptus spp.", "croissance_rapide": true}}
+]
