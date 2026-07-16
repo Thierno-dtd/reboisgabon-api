@@ -34,7 +34,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    "django.contrib.admin",
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
 
     # Apps
-    'apps.accounts',
+    'apps.accounts.apps.AccountsConfig',
     'apps.reforestation',
 ]
 
@@ -71,7 +71,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'config.urls'
 
-"""TEMPLATES = [
+TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [],
@@ -85,7 +85,7 @@ ROOT_URLCONF = 'config.urls'
             ],
         },
     },
-]"""
+]
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -150,6 +150,8 @@ EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = True
+FRONTEND_RESET_URL = config('FRONTEND_RESET_URL', default='http://localhost:8080/reset-password')
+DEFAULT_FROM_EMAIL = 'noreply@reboisgabon.ga'
 
 
 # Password validation
