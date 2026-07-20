@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'apps.reforestation',
     'apps.dashboard',
     'apps.finances',
+    'apps.audit',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -66,7 +67,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-     'django_otp.middleware.OTPMiddleware',
+    'django_otp.middleware.OTPMiddleware',
+    'apps.audit.middleware.AuditMiddleware', 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

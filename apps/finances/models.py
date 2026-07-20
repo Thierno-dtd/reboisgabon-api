@@ -84,7 +84,13 @@ class Financement(models.Model):
         ]
 
     def __str__(self):
-        cible = self.campagne or self.site or "—"
+        if self.campagne_id:
+            cible = f"Campagne #{self.campagne_id}"
+        elif self.site_id:
+            cible = f"Site #{self.site_id}"
+        else:
+            cible = "—"
+
         return f"{self.partenaire.nom} → {cible} ({self.montant} {self.devise})"
 
     def clean(self):

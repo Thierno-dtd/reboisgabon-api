@@ -15,6 +15,10 @@ from .serializers import (
     LoginSerializer, TwoFAVerifySerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer, TOTPSetupSerializer
 )
+from apps.audit.models import JournalActivite
+from apps.audit.middleware import get_current_ip
+
+from apps.accounts import serializers
 
 
 def tokens_for_user(user):
@@ -32,22 +36,29 @@ class LoginView(APIView):
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            JournalActivite.objects.create(
+                action=JournalActivite.Action.CONNEXION_ECHOUEE,
+                modele='User',
+                objet_repr=request.data.get('email', 'inconnu'),
+                adresse_ip=get_current_ip(),
+            )
+            raise serializers.ValidationError(serializer.errors)
+
         user = serializer.validated_data['user']
 
         if user.two_fa_enabled:
             temp_token = AccessToken.for_user(user)
             temp_token.set_exp(lifetime=timedelta(minutes=5))
             temp_token['purpose'] = '2fa_pending'
-            return Response({
-                'requires_2fa': True,
-                'temp_token': str(temp_token)
-            }, status=status.HTTP_200_OK)
+            return Response({'requires_2fa': True, 'temp_token': str(temp_token)})
 
-        return Response({
-            'requires_2fa': False,
-            **tokens_for_user(user)
-        })
+        JournalActivite.objects.create(
+            utilisateur=user, action=JournalActivite.Action.CONNEXION,
+            modele='User', objet_id=str(user.id), objet_repr=user.email,
+            adresse_ip=get_current_ip(),
+        )
+        return Response({'requires_2fa': False, **tokens_for_user(user)})
 
 
 class TwoFAVerifyView(APIView):
@@ -76,6 +87,11 @@ class TwoFAVerifyView(APIView):
         if not device.verify(serializer.validated_data['otp_code']):
             return Response({'detail': 'Code OTP invalide.'}, status=status.HTTP_401_UNAUTHORIZED)
 
+        JournalActivite.objects.create(
+            utilisateur=user, action=JournalActivite.Action.CONNEXION,
+            modele='User', objet_id=str(user.id), objet_repr=user.email,
+            adresse_ip=get_current_ip(),
+        )
         return Response(tokens_for_user(user))
 
 
