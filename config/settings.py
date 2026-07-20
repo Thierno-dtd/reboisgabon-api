@@ -54,7 +54,7 @@ INSTALLED_APPS = [
     'apps.accounts.apps.AccountsConfig',
     'apps.reforestation',
     'apps.dashboard',
-    
+    'apps.finances',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'

@@ -7,6 +7,7 @@ urlpatterns = [
     path('api/auth/', include('apps.accounts.auth_urls')),
     path('api/', include('apps.accounts.urls')), 
     path('api/', include('apps.reforestation.urls')), 
+    path('api/', include('apps.finances.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
 
     # Documentation OpenAPI — à montrer en soutenance

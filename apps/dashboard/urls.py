@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     DashboardOverviewView, DashboardParSiteView, DashboardParEssenceView,
     DashboardParProvinceView, DashboardEvolutionTemporelleView,
-    DashboardAlertesView, DashboardResponsablesView,
+    DashboardAlertesView, DashboardResponsablesView, DashboardFinancierView
 )
 
 urlpatterns = [
@@ -13,4 +13,8 @@ urlpatterns = [
     path('evolution/', DashboardEvolutionTemporelleView.as_view(), name='dashboard-evolution'),
     path('alertes/', DashboardAlertesView.as_view(), name='dashboard-alertes'),
     path('responsables/', DashboardResponsablesView.as_view(), name='dashboard-responsables'),
+]
+
+urlpatterns += [
+    path('financier/', DashboardFinancierView.as_view(), name='dashboard-financier'),
 ]

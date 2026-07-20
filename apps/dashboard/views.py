@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from apps.reforestation.models import SiteReboisement, CampagnePlantation, SuiviCroissance, Essence
 from apps.accounts.models import User
+from apps.finances.models import Partenaire, Financement, BudgetCampagne
 
 
 class DashboardOverviewView(APIView):
@@ -217,3 +218,47 @@ class DashboardResponsablesView(APIView):
             }
             for a in agents
         ])
+
+class DashboardFinancierView(APIView):
+    """
+    Vue financière globale — combien a été investi, par qui, où va l'argent,
+    et le rendement réel (coût par plant survivant). C'est l'écran qui parle
+    directement aux bailleurs et décideurs financiers.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        total_finance = Financement.objects.aggregate(t=Sum('montant'))['t'] or 0
+
+        par_partenaire = list(
+            Partenaire.objects.annotate(
+                total=Sum('financements__montant'),
+                nb_financements=Count('financements'),
+            ).filter(total__isnull=False).order_by('-total').values(
+                'nom', 'type_partenaire', 'total', 'nb_financements'
+            )
+        )
+
+        par_type_partenaire = list(
+            Financement.objects.values('partenaire__type_partenaire').annotate(
+                total=Sum('montant')
+            ).order_by('-total')
+        )
+
+        budgets = BudgetCampagne.objects.select_related('campagne').all()
+        cout_moyen_par_plant = [
+            b.cout_par_plant_survivant for b in budgets if b.cout_par_plant_survivant is not None
+        ]
+
+        return Response({
+            'total_finance': total_finance,
+            'nombre_partenaires_actifs': Partenaire.objects.filter(actif=True).count(),
+            'financement_par_partenaire': par_partenaire,
+            'financement_par_type_partenaire': par_type_partenaire,
+            'budget_total_alloue': budgets.aggregate(t=Sum('budget_alloue'))['t'] or 0,
+            'cout_reel_total': budgets.aggregate(t=Sum('cout_reel'))['t'] or 0,
+            'cout_moyen_par_plant_survivant': (
+                round(sum(cout_moyen_par_plant) / len(cout_moyen_par_plant), 2)
+                if cout_moyen_par_plant else None
+            ),
+        })

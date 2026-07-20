@@ -8,7 +8,17 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.reforestation.models import Essence, SiteReboisement, CampagnePlantation, SuiviCroissance
+from apps.finances.models import Partenaire, Financement, BudgetCampagne
 
+PARTENAIRES_DATA = [
+    ("Ministère des Eaux et Forêts", "ETAT", "Gabon"),
+    ("PNUD Gabon", "BAILLEUR_INTL", "Gabon"),
+    ("WWF Gabon", "ONG", "Gabon"),
+    ("Banque Mondiale — Fonds Forestier", "BAILLEUR_INTL", "International"),
+    ("Total Énergies Gabon — RSE", "ENTREPRISE", "Gabon"),
+    ("Fondation Sylviculture Durable", "ONG", "France"),
+    ("Union Européenne — Programme Forêt", "BAILLEUR_INTL", "Belgique"),
+]
 
 PROVINCES_GABON = [
     "Estuaire", "Haut-Ogooué", "Moyen-Ogooué", "Ngounié",
@@ -84,6 +94,9 @@ class Command(BaseCommand):
         essences = self._seed_essences()
         sites = self._seed_sites(agents)
         campagnes = self._seed_campagnes(sites, essences, agents)
+        partenaires = self._seed_partenaires()
+        self._seed_financements(partenaires, sites, campagnes)
+        self._seed_budgets(campagnes)
         self._seed_suivis(campagnes, agents)
 
         self.stdout.write(self.style.SUCCESS(
@@ -222,3 +235,53 @@ class Command(BaseCommand):
                     observations=random.choice(OBSERVATIONS),
                     controle_par=random.choice(agents),
                 )
+    
+    def _seed_partenaires(self):
+        partenaires = []
+        for nom, type_p, pays in PARTENAIRES_DATA:
+            p, _ = Partenaire.objects.get_or_create(
+                nom=nom, defaults={'type_partenaire': type_p, 'pays': pays, 'actif': True}
+            )
+            partenaires.append(p)
+        return partenaires
+
+    def _seed_financements(self, partenaires, sites, campagnes):
+        devises = ['XAF', 'XAF', 'XAF', 'EUR', 'USD']
+
+        for site in random.sample(sites, k=min(10, len(sites))):
+            Financement.objects.create(
+                partenaire=random.choice(partenaires),
+                site=site,
+                montant=random.randint(5_000_000, 80_000_000),
+                devise=random.choice(devises),
+                date_financement=site.created_at.date() if hasattr(site, 'created_at') else date.today(),
+                reference=f"CONV-{random.randint(1000,9999)}",
+                description="Subvention globale pour le programme de reboisement du site.",
+            )
+
+        for campagne in random.sample(campagnes, k=min(40, len(campagnes))):
+            Financement.objects.create(
+                partenaire=random.choice(partenaires),
+                campagne=campagne,
+                montant=random.randint(500_000, 15_000_000),
+                devise=random.choice(devises),
+                date_financement=campagne.date_plantation,
+                reference=f"CAMP-{random.randint(1000,9999)}",
+                description="Financement dédié à la campagne de plantation.",
+            )
+
+    def _seed_budgets(self, campagnes):
+        for campagne in campagnes:
+            cout_par_plant_prevu = random.uniform(800, 2500) 
+            budget_alloue = campagne.nombre_plants * cout_par_plant_prevu
+            variation = random.uniform(0.85, 1.25)  
+            cout_reel = budget_alloue * variation
+
+            BudgetCampagne.objects.update_or_create(
+                campagne=campagne,
+                defaults={
+                    'budget_alloue': round(budget_alloue, 2),
+                    'cout_reel': round(cout_reel, 2),
+                    'devise': 'XAF',
+                }
+            )
