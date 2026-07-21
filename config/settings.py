@@ -56,7 +56,22 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.finances',
     'apps.audit',
+    'django_ratelimit',
 ]
+
+
+RATELIMIT_ENABLE = True
+RATELIMIT_USE_CACHE = 'default'
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -132,6 +147,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '1000/hour',
+        'anon': '50/hour',
+    },
 }
 
 SIMPLE_JWT = {
@@ -200,3 +223,11 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+"""
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL', default=True, cast=bool)
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS', default='', cast=lambda v: [s.strip() for s in v.split(',') if s]
+) if not config('CORS_ALLOW_ALL', default=True, cast=bool) else []
+"""
+

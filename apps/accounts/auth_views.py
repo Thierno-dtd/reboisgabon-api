@@ -19,6 +19,8 @@ from apps.audit.models import JournalActivite
 from apps.audit.middleware import get_current_ip
 
 from apps.accounts import serializers
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
 
 
 def tokens_for_user(user):
@@ -26,6 +28,7 @@ def tokens_for_user(user):
     return {'access': str(refresh.access_token), 'refresh': str(refresh)}
 
 
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=False), name='post')
 class LoginView(APIView):
     """
     Étape 1 : email + mot de passe.
@@ -35,6 +38,19 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        was_limited = getattr(request, 'limited', False)
+        if was_limited:
+            JournalActivite.objects.create(
+                action=JournalActivite.Action.CONNEXION_ECHOUEE,
+                modele='User',
+                objet_repr=f"Rate limit dépassé — {request.data.get('email', 'inconnu')}",
+                adresse_ip=get_current_ip(),
+            )
+            return Response(
+                {'detail': "Trop de tentatives de connexion. Réessayez dans une minute."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
             JournalActivite.objects.create(
@@ -61,6 +77,7 @@ class LoginView(APIView):
         return Response({'requires_2fa': False, **tokens_for_user(user)})
 
 
+@method_decorator(ratelimit(key='ip', rate='10/m', method='POST', block=False), name='post')
 class TwoFAVerifyView(APIView):
     """Étape 2 : vérifie le code TOTP et délivre les vrais tokens JWT."""
     permission_classes = [AllowAny]
@@ -95,6 +112,7 @@ class TwoFAVerifyView(APIView):
         return Response(tokens_for_user(user))
 
 
+@method_decorator(ratelimit(key='ip', rate='3/m', method='POST', block=False), name='post')
 class ForgotPasswordView(APIView):
     """Génère un token unique, envoyé par email, expirant dans 1h."""
     permission_classes = [AllowAny]

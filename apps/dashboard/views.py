@@ -1,10 +1,15 @@
 from datetime import timedelta
+from multiprocessing.dummy import connection
 from django.db.models import Avg, Count, Sum, Q, F
 from django.db.models.functions import TruncMonth, TruncYear
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.core.cache import cache
+from django.conf import settings
+from django.db import connection
+from rest_framework.permissions import AllowAny
 
 from apps.reforestation.models import SiteReboisement, CampagnePlantation, SuiviCroissance, Essence
 from apps.accounts.models import User
@@ -17,8 +22,14 @@ class DashboardOverviewView(APIView):
     C'est le premier écran que verra le décideur.
     """
     permission_classes = [IsAuthenticated]
+    CACHE_KEY = 'dashboard:overview'
+    CACHE_TTL = 180
 
     def get(self, request):
+        cached = cache.get(self.CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+        
         sites = SiteReboisement.objects.all()
         campagnes = CampagnePlantation.objects.all()
         suivis = SuiviCroissance.objects.all()
@@ -29,17 +40,19 @@ class DashboardOverviewView(APIView):
             sites.values('statut').annotate(total=Count('id')).order_by('statut')
         )
 
-        return Response({
+        data = {
             'total_sites': sites.count(),
             'superficie_totale_hectares': sites.aggregate(t=Sum('superficie_hectares'))['t'] or 0,
             'total_campagnes': campagnes.count(),
             'total_plants_plantes': campagnes.aggregate(t=Sum('nombre_plants'))['t'] or 0,
             'total_suivis_effectues': suivis.count(),
             'taux_survie_global': round(taux_global, 2) if taux_global else None,
-            'sites_par_statut': sites_par_statut,
+            'sites_par_statut': list(sites.values('statut').annotate(total=Count('id')).order_by('statut')),
             'total_essences_utilisees': campagnes.values('essence').distinct().count(),
             'total_utilisateurs_actifs': User.objects.filter(is_active=True).count(),
-        })
+        }
+        cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
+        return Response(data)
 
 
 class DashboardParSiteView(APIView):
@@ -48,8 +61,14 @@ class DashboardParSiteView(APIView):
     Très utile pour un décideur qui veut savoir où réallouer les moyens.
     """
     permission_classes = [IsAuthenticated]
+    CACHE_KEY = 'dashboard:sites'
+    CACHE_TTL = 180
 
     def get(self, request):
+        cached = cache.get(self.CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+        
         sites = SiteReboisement.objects.annotate(
             taux_moyen=Avg('campagnes__suivis__taux_survie'),
             nb_campagnes=Count('campagnes', distinct=True),
@@ -69,7 +88,7 @@ class DashboardParSiteView(APIView):
             }
             for s in sites
         ]
-
+        cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
         return Response({
             'top_5_meilleurs_sites': data[:5],
             'top_5_sites_a_risque': list(reversed(data[-5:])) if len(data) > 5 else list(reversed(data)),
@@ -80,15 +99,21 @@ class DashboardParSiteView(APIView):
 class DashboardParEssenceView(APIView):
     """Performance comparée par essence — quelle espèce survit le mieux au Gabon."""
     permission_classes = [IsAuthenticated]
+    CACHE_KEY = 'dashboard:essences'
+    CACHE_TTL = 180
 
     def get(self, request):
+        cached = cache.get(self.CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+    
         essences = Essence.objects.annotate(
             taux_moyen=Avg('campagnes__suivis__taux_survie'),
             nb_campagnes=Count('campagnes', distinct=True),
             total_plants=Sum('campagnes__nombre_plants'),
         ).order_by('-taux_moyen')
 
-        return Response([
+        data = [
             {
                 'essence': e.nom,
                 'nom_scientifique': e.nom_scientifique,
@@ -98,14 +123,23 @@ class DashboardParEssenceView(APIView):
                 'total_plants': e.total_plants or 0,
             }
             for e in essences
-        ])
+        ]
+        cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
+
+        return Response(data)
 
 
 class DashboardParProvinceView(APIView):
     """Vue géographique agrégée — utile pour une carte / répartition régionale."""
     permission_classes = [IsAuthenticated]
+    CACHE_KEY = 'dashboard:provinces'
+    CACHE_TTL = 180
 
     def get(self, request):
+        cached = cache.get(self.CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+
         provinces = SiteReboisement.objects.exclude(province='').values('province').annotate(
             nb_sites=Count('id', distinct=True),
             superficie_totale=Sum('superficie_hectares'),
@@ -113,7 +147,10 @@ class DashboardParProvinceView(APIView):
             total_plants=Sum('campagnes__nombre_plants'),
         ).order_by('-nb_sites')
 
-        return Response(list(provinces))
+        data = list(provinces)
+        cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
+
+        return Response(data)
 
 
 class DashboardEvolutionTemporelleView(APIView):
@@ -122,8 +159,14 @@ class DashboardEvolutionTemporelleView(APIView):
     C'est le graphique en courbe que les décideurs adorent voir en réunion.
     """
     permission_classes = [IsAuthenticated]
+    CACHE_KEY = 'dashboard:evolution'
+    CACHE_TTL = 180
 
     def get(self, request):
+        cached = cache.get(self.CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+        
         plantations_par_mois = list(
             CampagnePlantation.objects
             .annotate(mois=TruncMonth('date_plantation'))
@@ -140,10 +183,13 @@ class DashboardEvolutionTemporelleView(APIView):
             .order_by('mois')
         )
 
-        return Response({
+        data = {
             'plantations_par_mois': plantations_par_mois,
             'survie_par_mois': survie_par_mois,
-        })
+        }
+        cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
+
+        return Response(data)
 
 
 class DashboardAlertesView(APIView):
@@ -226,8 +272,14 @@ class DashboardFinancierView(APIView):
     directement aux bailleurs et décideurs financiers.
     """
     permission_classes = [IsAuthenticated]
+    CACHE_KEY = 'dashboard:financier'
+    CACHE_TTL = 180
 
     def get(self, request):
+        cached = cache.get(self.CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+        
         total_finance = Financement.objects.aggregate(t=Sum('montant'))['t'] or 0
 
         par_partenaire = list(
@@ -250,7 +302,7 @@ class DashboardFinancierView(APIView):
             b.cout_par_plant_survivant for b in budgets if b.cout_par_plant_survivant is not None
         ]
 
-        return Response({
+        data = {
             'total_finance': total_finance,
             'nombre_partenaires_actifs': Partenaire.objects.filter(actif=True).count(),
             'financement_par_partenaire': par_partenaire,
@@ -261,4 +313,23 @@ class DashboardFinancierView(APIView):
                 round(sum(cout_moyen_par_plant) / len(cout_moyen_par_plant), 2)
                 if cout_moyen_par_plant else None
             ),
-        })
+        }
+        cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
+
+        return Response(data)
+
+
+class HealthCheckView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        db_ok = True
+        try:
+            connection.ensure_connection()
+        except Exception:
+            db_ok = False
+
+        return Response({
+            'status': 'ok' if db_ok else 'degraded',
+            'database': 'connected' if db_ok else 'unavailable',
+        }, status=200 if db_ok else 503)
