@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'apps.finances',
     'apps.audit',
     'apps.notifications',
+    'apps.exports',
     'django_ratelimit',
 ]
 

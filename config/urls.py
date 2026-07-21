@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/', include('apps.finances.urls')),
     path('api/', include('apps.notifications.urls')),
     path('api/', include('apps.audit.urls')),
+    path('api/exports/', include('apps.exports.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
 
     # Documentation OpenAPI — à montrer en soutenance
