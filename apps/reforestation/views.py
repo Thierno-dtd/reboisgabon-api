@@ -13,6 +13,11 @@ from .serializers import (
     SuiviCroissanceSerializer,
 )
 from .filters import SiteReboisementFilter, CampagnePlantationFilter, SuiviCroissanceFilter
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import PhotoSuivi
+from .serializers import PhotoSuiviSerializer
+from datetime import timedelta
+from django.utils import timezone
 
 
 class EssenceViewSet(viewsets.ModelViewSet):
@@ -110,3 +115,57 @@ class SuiviCroissanceViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         return super().destroy(request, *args, **kwargs)
+    
+
+class PhotoSuiviViewSet(viewsets.ModelViewSet):
+    queryset = PhotoSuivi.objects.select_related('suivi', 'prise_par').all()
+    serializer_class = PhotoSuiviSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['suivi']
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
+
+class CalendrierSuivisView(APIView):
+    """
+    Vue calendrier : tous les suivis programmés dans les prochains jours.
+    Utile pour un écran 'planning terrain' côté JavaFX.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        horizon_jours = int(request.query_params.get('horizon', 30))
+        aujourdhui = timezone.now().date()
+        limite = aujourdhui + timedelta(days=horizon_jours)
+
+        suivis_programmes = SuiviCroissance.objects.filter(
+            prochaine_date_controle__isnull=False,
+            prochaine_date_controle__gte=aujourdhui,
+            prochaine_date_controle__lte=limite,
+        ).select_related('campagne', 'campagne__site', 'campagne__essence').order_by('prochaine_date_controle')
+
+        en_retard = SuiviCroissance.objects.filter(
+            prochaine_date_controle__isnull=False,
+            prochaine_date_controle__lt=aujourdhui,
+        ).select_related('campagne', 'campagne__site').order_by('prochaine_date_controle')
+
+        def serialize(qs):
+            return [
+                {
+                    'id': s.id,
+                    'site': s.campagne.site.nom,
+                    'essence': s.campagne.essence.nom,
+                    'prochaine_date_controle': s.prochaine_date_controle,
+                    'dernier_taux_survie': s.taux_survie,
+                }
+                for s in qs
+            ]
+
+        return Response({
+            'horizon_jours': horizon_jours,
+            'suivis_a_venir': serialize(suivis_programmes),
+            'suivis_en_retard': serialize(en_retard),
+        })

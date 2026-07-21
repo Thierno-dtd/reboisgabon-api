@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from .models import Essence, SiteReboisement, CampagnePlantation, SuiviCroissance
+from .models import Essence, PhotoSuivi, SiteReboisement, CampagnePlantation, SuiviCroissance
 
 
 class EssenceSerializer(serializers.ModelSerializer):
@@ -99,3 +99,25 @@ class SuiviCroissanceSerializer(serializers.ModelSerializer):
                 {'date_controle': "La date de contrôle ne peut pas précéder la date de plantation."}
             )
         return attrs
+
+class PhotoSuiviSerializer(serializers.ModelSerializer):
+    prise_par_nom = serializers.CharField(source='prise_par.get_full_name', read_only=True, default=None)
+
+    class Meta:
+        model = PhotoSuivi
+        fields = ['id', 'suivi', 'image', 'legende', 'prise_par', 'prise_par_nom', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_image(self, value):
+        extensions_autorisees = ('.jpg', '.jpeg', '.png', '.webp')
+        if not value.name.lower().endswith(extensions_autorisees):
+            raise serializers.ValidationError("Formats acceptés : JPG, JPEG, PNG, WEBP.")
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("La taille de l'image ne doit pas dépasser 5 Mo.")
+        return value
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            validated_data['prise_par'] = request.user
+        return super().create(validated_data)

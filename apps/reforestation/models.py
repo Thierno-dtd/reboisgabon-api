@@ -123,6 +123,10 @@ class SuiviCroissance(models.Model):
         CampagnePlantation, on_delete=models.CASCADE, related_name='suivis'
     )
     date_controle = models.DateField()
+    prochaine_date_controle = models.DateField(
+        null=True, blank=True,
+        help_text="Date prévue pour le prochain contrôle de terrain."
+    )
     taux_survie = models.DecimalField(
         max_digits=5, decimal_places=2,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
@@ -154,3 +158,33 @@ class SuiviCroissance(models.Model):
     def clean(self):
         if self.date_controle and self.campagne_id and self.date_controle < self.campagne.date_plantation:
             raise ValidationError("La date de contrôle ne peut pas précéder la date de plantation.")
+        
+
+def chemin_photo_suivi(instance, filename):
+    """Organise les photos par campagne pour éviter un dossier media/ fourre-tout."""
+    return f"suivis/{instance.suivi.campagne.site.id}/{instance.suivi.id}/{filename}"
+
+
+class PhotoSuivi(models.Model):
+    """Photo terrain associée à un contrôle de croissance — preuve visuelle."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    suivi = models.ForeignKey(
+        SuiviCroissance, on_delete=models.CASCADE, related_name='photos'
+    )
+    image = models.ImageField(upload_to=chemin_photo_suivi)
+    legende = models.CharField(max_length=255, blank=True)
+    prise_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='photos_prises'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'photos_suivi'
+        verbose_name = 'Photo de suivi'
+        verbose_name_plural = 'Photos de suivi'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Photo — {self.suivi} ({self.created_at:%Y-%m-%d})"

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.finances',
     'apps.audit',
+    'apps.notifications',
     'django_ratelimit',
 ]
 
@@ -131,6 +132,11 @@ DATABASES = {
     }
 }
 """
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024 
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
