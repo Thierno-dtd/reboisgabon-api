@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Avg, Count
+from .scoring import calculer_score_ecologique
 
 from .models import Essence, SiteReboisement, CampagnePlantation, SuiviCroissance
 from .serializers import (
@@ -308,3 +309,56 @@ class ObjectifReboisementViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         return super().destroy(request, *args, **kwargs)
+
+
+
+@extend_schema(summary="Score écologique détaillé d'un site (explicable)", tags=['Sites'])
+class ScoreEcologiqueSiteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            site = SiteReboisement.objects.get(pk=pk)
+        except SiteReboisement.DoesNotExist:
+            return Response({'detail': 'Site introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        resultat = calculer_score_ecologique(site)
+        resultat['site'] = {'id': site.id, 'nom': site.nom, 'localite': site.localite}
+        return Response(resultat)
+
+
+@extend_schema(summary="Classement de tous les sites par score écologique", tags=['Dashboard'])
+class ClassementScoreEcologiqueView(APIView):
+    """
+    Classement global — permet à un décideur d'identifier immédiatement
+    les sites exemplaires (à valoriser auprès des bailleurs) et les sites
+    qui nécessitent une intervention.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.core.cache import cache
+
+        cache_key = 'dashboard:scores_ecologiques'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        sites = SiteReboisement.objects.all()
+        classement = []
+        for site in sites:
+            resultat = calculer_score_ecologique(site)
+            classement.append({
+                'id': site.id, 'nom': site.nom, 'localite': site.localite,
+                'score_global': resultat['score_global'], 'classe': resultat['classe'],
+            })
+
+        classement.sort(key=lambda x: x['score_global'], reverse=True)
+        data = {
+            'classement': classement,
+            'score_moyen_national': round(
+                sum(c['score_global'] for c in classement) / len(classement), 1
+            ) if classement else None,
+        }
+        cache.set(cache_key, data, 180)
+        return Response(data)

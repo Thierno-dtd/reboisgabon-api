@@ -5,7 +5,7 @@ from .views import (
     DashboardAlertesView, DashboardResponsablesView, DashboardFinancierView,
     DashboardObjectifsView
 )
-from apps.reforestation.views import DashboardCarteProvinceView
+from apps.reforestation.views import ClassementScoreEcologiqueView, DashboardCarteProvinceView
 
 urlpatterns = [
     path('overview/', DashboardOverviewView.as_view(), name='dashboard-overview'),
@@ -21,4 +21,5 @@ urlpatterns += [
     path('financier/', DashboardFinancierView.as_view(), name='dashboard-financier'),
     path('carte-provinces/', DashboardCarteProvinceView.as_view(), name='dashboard-carte-provinces'),
     path('objectifs/', DashboardObjectifsView.as_view(), name='dashboard-objectifs'),
+    path('scores-ecologiques/', ClassementScoreEcologiqueView.as_view(), name='dashboard-scores-ecologiques'),
 ]
