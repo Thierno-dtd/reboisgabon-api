@@ -199,21 +199,37 @@ class Command(BaseCommand):
                 campagnes.append(campagne)
         return campagnes
 
+    FACTEUR_ESSENCE = {
+        'Okoumé': 15, 'Eucalyptus': 12, 'Acacia': 10,       # essences robustes/rapides
+        'Movingui': 5, 'Ozigo': 3,
+        'Padouk': -3, 'Azobé': -5,
+        'Moabi': -8, 'Kevazingo': -10, 'Tali': -6,           # essences plus exigeantes
+    }
+
+    FACTEUR_PROVINCE = {
+        'Estuaire': 8, 'Moyen-Ogooué': 6, 'Ogooué-Maritime': 5,
+        'Woleu-Ntem': 4, 'Ngounié': 2,
+        'Ogooué-Ivindo': 0, 'Ogooué-Lolo': -2,
+        'Haut-Ogooué': -4, 'Nyanga': -6,
+    }
+
     def _seed_suivis(self, campagnes, agents):
         today = date.today()
 
         for campagne in campagnes:
-            # Nombre de contrôles dépend de l'ancienneté de la campagne
             jours_ecoules = (today - campagne.date_plantation).days
-            nb_controles = min(max(jours_ecoules // 60, 1), 8)  # un contrôle tous les ~2 mois, max 8
+            nb_controles = min(max(jours_ecoules // 60, 1), 8)
 
-            # Tendance de survie propre à la campagne (certaines campagnes réussissent mieux que d'autres)
-            tendance = random.choice(['excellente', 'bonne', 'moyenne', 'difficile'])
-            taux_base = {
-                'excellente': 92, 'bonne': 80, 'moyenne': 65, 'difficile': 45,
-            }[tendance]
+            # Taux de base déterminé par un vrai signal (essence + province + superficie),
+            # plus un peu de bruit résiduel réaliste (aléas climatiques, terrain, etc.)
+            base = 65
+            base += self.FACTEUR_ESSENCE.get(campagne.essence.nom, 0)
+            base += self.FACTEUR_PROVINCE.get(campagne.site.province, 0)
+            base += 5 if campagne.essence.croissance_rapide else 0
+            base += random.uniform(-6, 6)  # bruit résiduel, mais plus faible que l'ancien tirage 100% aléatoire
+            taux_base = max(20, min(95, base))
 
-            taux_courant = 100.0  # au début, 100% des plants sont vivants
+            taux_courant = 100.0
             date_courante = campagne.date_plantation
 
             for c in range(nb_controles):
@@ -221,9 +237,8 @@ class Command(BaseCommand):
                 if date_courante > today:
                     break
 
-                # Le taux décroît progressivement vers le taux "cible" de la tendance, avec du bruit
                 decroissance = (100 - taux_base) / max(nb_controles, 1)
-                taux_courant = max(0, taux_courant - decroissance + random.uniform(-4, 4))
+                taux_courant = max(0, taux_courant - decroissance + random.uniform(-3, 3))
                 taux_courant = min(100, taux_courant)
 
                 nombre_vivants = int(campagne.nombre_plants * (taux_courant / 100))

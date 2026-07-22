@@ -1,0 +1,4306 @@
+openapi: 3.0.3
+info:
+  title: ReboisGabon API
+  version: 1.0.0
+  description: API de gestion des programmes de reboisement au Gabon
+paths:
+  /api/auth/2fa/disable/:
+    post:
+      operationId: auth_2fa_disable_create
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/2fa/setup/confirm/:
+    post:
+      operationId: auth_2fa_setup_confirm_create
+      description: Confirme l'activation de la 2FA après scan du QR code et saisie
+        du 1er code.
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/2fa/setup/init/:
+    post:
+      operationId: auth_2fa_setup_init_create
+      description: Génère (ou régénère) le secret TOTP et renvoie l'URI de provisioning
+        (QR code).
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: |-
+        Étape 1 : email + mot de passe.
+        - Si 2FA désactivée -> renvoie directement les tokens JWT.
+        - Si 2FA activée -> renvoie un temp_token à usage unique, à fournir avec le code OTP.
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/login/2fa/verify/:
+    post:
+      operationId: auth_login_2fa_verify_create
+      description: 'Étape 2 : vérifie le code TOTP et délivre les vrais tokens JWT.'
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      description: Infos du user connecté — pratique pour le client JavaFX après login.
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/password/forgot/:
+    post:
+      operationId: auth_password_forgot_create
+      description: Génère un token unique, envoyé par email, expirant dans 1h.
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/password/reset/:
+    post:
+      operationId: auth_password_reset_create
+      description: Réinitialise le mot de passe via le token reçu, puis l'invalide.
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/budgets-campagne/:
+    get:
+      operationId: budgets_campagne_list
+      description: |-
+        Pas de création directe : le budget se crée automatiquement à la volée
+        (get_or_create) lors du premier PATCH pour une campagne donnée.
+      parameters:
+      - in: query
+        name: campagne
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      tags:
+      - budgets-campagne
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBudgetCampagneList'
+          description: ''
+    post:
+      operationId: budgets_campagne_create
+      description: |-
+        Pas de création directe : le budget se crée automatiquement à la volée
+        (get_or_create) lors du premier PATCH pour une campagne donnée.
+      tags:
+      - budgets-campagne
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetCampagne'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BudgetCampagne'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BudgetCampagne'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetCampagne'
+          description: ''
+  /api/budgets-campagne/{id}/:
+    get:
+      operationId: budgets_campagne_retrieve
+      description: |-
+        Pas de création directe : le budget se crée automatiquement à la volée
+        (get_or_create) lors du premier PATCH pour une campagne donnée.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un(une) valeur entière unique identifiant ce(cette) Budget de
+          campagne.
+        required: true
+      tags:
+      - budgets-campagne
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetCampagne'
+          description: ''
+    put:
+      operationId: budgets_campagne_update
+      description: |-
+        Pas de création directe : le budget se crée automatiquement à la volée
+        (get_or_create) lors du premier PATCH pour une campagne donnée.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un(une) valeur entière unique identifiant ce(cette) Budget de
+          campagne.
+        required: true
+      tags:
+      - budgets-campagne
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetCampagne'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BudgetCampagne'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BudgetCampagne'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetCampagne'
+          description: ''
+    patch:
+      operationId: budgets_campagne_partial_update
+      description: |-
+        Pas de création directe : le budget se crée automatiquement à la volée
+        (get_or_create) lors du premier PATCH pour une campagne donnée.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un(une) valeur entière unique identifiant ce(cette) Budget de
+          campagne.
+        required: true
+      tags:
+      - budgets-campagne
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBudgetCampagne'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBudgetCampagne'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBudgetCampagne'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetCampagne'
+          description: ''
+    delete:
+      operationId: budgets_campagne_destroy
+      description: |-
+        Pas de création directe : le budget se crée automatiquement à la volée
+        (get_or_create) lors du premier PATCH pour une campagne donnée.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un(une) valeur entière unique identifiant ce(cette) Budget de
+          campagne.
+        required: true
+      tags:
+      - budgets-campagne
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/calendrier-suivis/:
+    get:
+      operationId: calendrier_suivis_retrieve
+      description: |-
+        Vue calendrier : tous les suivis programmés dans les prochains jours.
+        Utile pour un écran 'planning terrain' côté JavaFX.
+      tags:
+      - calendrier-suivis
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/campagnes/:
+    get:
+      operationId: campagnes_list
+      parameters:
+      - in: query
+        name: date_debut
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: date_fin
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: essence
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: essence_nom
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: site
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: site_nom
+        schema:
+          type: string
+      - in: query
+        name: taux_survie_max
+        schema:
+          type: number
+      - in: query
+        name: taux_survie_min
+        schema:
+          type: number
+      tags:
+      - campagnes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCampagnePlantationListList'
+          description: ''
+    post:
+      operationId: campagnes_create
+      tags:
+      - campagnes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampagnePlantationWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CampagnePlantationWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CampagnePlantationWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampagnePlantationWrite'
+          description: ''
+  /api/campagnes/{id}/:
+    get:
+      operationId: campagnes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Campagne de plantation.
+        required: true
+      tags:
+      - campagnes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampagnePlantationList'
+          description: ''
+    put:
+      operationId: campagnes_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Campagne de plantation.
+        required: true
+      tags:
+      - campagnes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampagnePlantationWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CampagnePlantationWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CampagnePlantationWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampagnePlantationWrite'
+          description: ''
+    patch:
+      operationId: campagnes_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Campagne de plantation.
+        required: true
+      tags:
+      - campagnes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCampagnePlantationWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCampagnePlantationWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCampagnePlantationWrite'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampagnePlantationWrite'
+          description: ''
+    delete:
+      operationId: campagnes_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Campagne de plantation.
+        required: true
+      tags:
+      - campagnes
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/dashboard/alertes/:
+    get:
+      operationId: dashboard_alertes_retrieve
+      description: |-
+        Signaux d'alerte automatiques : sites/campagnes sous un seuil critique de survie,
+        ou sans suivi récent. Argument de vente fort pour un jury : l'API ne fait pas
+        que restituer des données, elle aide à la décision.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/carte-provinces/:
+    get:
+      operationId: dashboard_carte_provinces_retrieve
+      description: Agrégation géographique enrichie — centroïde par province + statistiques,
+        pour affichage carte-choroplèthe.
+      summary: Statistiques géographiques agrégées par province (pour carte)
+      tags:
+      - Dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/essences/:
+    get:
+      operationId: dashboard_essences_retrieve
+      description: Performance comparée par essence — quelle espèce survit le mieux
+        au Gabon.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/evolution/:
+    get:
+      operationId: dashboard_evolution_retrieve
+      description: |-
+        Évolution mensuelle : plantations et taux de survie dans le temps.
+        C'est le graphique en courbe que les décideurs adorent voir en réunion.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/financier/:
+    get:
+      operationId: dashboard_financier_retrieve
+      description: |-
+        Vue financière globale — combien a été investi, par qui, où va l'argent,
+        et le rendement réel (coût par plant survivant). C'est l'écran qui parle
+        directement aux bailleurs et décideurs financiers.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/objectifs/:
+    get:
+      operationId: dashboard_objectifs_retrieve
+      description: |-
+        Vue synthétique de tous les objectifs actifs — le tableau de bord
+        que les décideurs consultent en priorité pour suivre les engagements.
+      summary: Vue d'ensemble des objectifs (progression, retards)
+      tags:
+      - Dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/overview/:
+    get:
+      operationId: dashboard_overview_retrieve
+      description: |-
+        Vue d'ensemble globale — carte de synthèse en haut du dashboard.
+        C'est le premier écran que verra le décideur.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/provinces/:
+    get:
+      operationId: dashboard_provinces_retrieve
+      description: Vue géographique agrégée — utile pour une carte / répartition régionale.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/responsables/:
+    get:
+      operationId: dashboard_responsables_retrieve
+      description: Performance par agent responsable — utile en interne pour évaluer
+        les équipes terrain.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/scores-ecologiques/:
+    get:
+      operationId: dashboard_scores_ecologiques_retrieve
+      description: |-
+        Classement global — permet à un décideur d'identifier immédiatement
+        les sites exemplaires (à valoriser auprès des bailleurs) et les sites
+        qui nécessitent une intervention.
+      summary: Classement de tous les sites par score écologique
+      tags:
+      - Dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/dashboard/sites/:
+    get:
+      operationId: dashboard_sites_retrieve
+      description: |-
+        Classement des sites par performance — top et flop.
+        Très utile pour un décideur qui veut savoir où réallouer les moyens.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/essences/:
+    get:
+      operationId: essences_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      tags:
+      - essences
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEssenceList'
+          description: ''
+    post:
+      operationId: essences_create
+      tags:
+      - essences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Essence'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Essence'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Essence'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Essence'
+          description: ''
+  /api/essences/{id}/:
+    get:
+      operationId: essences_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Essence.
+        required: true
+      tags:
+      - essences
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Essence'
+          description: ''
+    put:
+      operationId: essences_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Essence.
+        required: true
+      tags:
+      - essences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Essence'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Essence'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Essence'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Essence'
+          description: ''
+    patch:
+      operationId: essences_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Essence.
+        required: true
+      tags:
+      - essences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEssence'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEssence'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEssence'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Essence'
+          description: ''
+    delete:
+      operationId: essences_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Essence.
+        required: true
+      tags:
+      - essences
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/exports/campagnes/excel/:
+    get:
+      operationId: exports_campagnes_excel_retrieve
+      tags:
+      - exports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/exports/financements/excel/:
+    get:
+      operationId: exports_financements_excel_retrieve
+      tags:
+      - exports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/exports/rapport-financier/pdf/:
+    get:
+      operationId: exports_rapport_financier_pdf_retrieve
+      tags:
+      - exports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/exports/rapport-synthese/pdf/:
+    get:
+      operationId: exports_rapport_synthese_pdf_retrieve
+      description: |-
+        Génère le PDF de synthèse générale en réutilisant la logique du dashboard
+        (pas de duplication de requêtes : on appelle directement les mêmes calculs).
+      tags:
+      - exports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/exports/sites/excel/:
+    get:
+      operationId: exports_sites_excel_retrieve
+      tags:
+      - exports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/financements/:
+    get:
+      operationId: financements_list
+      parameters:
+      - in: query
+        name: campagne
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: date_debut
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: date_fin
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: devise
+        schema:
+          type: string
+          enum:
+          - EUR
+          - USD
+          - XAF
+        description: |-
+          * `XAF` - Franc CFA (XAF)
+          * `EUR` - Euro
+          * `USD` - Dollar US
+      - in: query
+        name: montant_max
+        schema:
+          type: number
+      - in: query
+        name: montant_min
+        schema:
+          type: number
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - in: query
+        name: partenaire
+        schema:
+          type: string
+          format: uuid
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: site
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - financements
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFinancementList'
+          description: ''
+    post:
+      operationId: financements_create
+      tags:
+      - financements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Financement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Financement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Financement'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Financement'
+          description: ''
+  /api/financements/{id}/:
+    get:
+      operationId: financements_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Financement.
+        required: true
+      tags:
+      - financements
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Financement'
+          description: ''
+    put:
+      operationId: financements_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Financement.
+        required: true
+      tags:
+      - financements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Financement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Financement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Financement'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Financement'
+          description: ''
+    patch:
+      operationId: financements_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Financement.
+        required: true
+      tags:
+      - financements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFinancement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFinancement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFinancement'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Financement'
+          description: ''
+    delete:
+      operationId: financements_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Financement.
+        required: true
+      tags:
+      - financements
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/health/:
+    get:
+      operationId: health_retrieve
+      tags:
+      - health
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/intelligence/detection-risque/:
+    get:
+      operationId: intelligence_detection_risque_retrieve
+      description: |-
+        Contrairement à /api/dashboard/alertes/ (qui détecte un risque déjà CONSTATÉ
+        via des suivis réels), cette vue prédit un risque AVANT même le premier
+        contrôle terrain — utile pour prioriser les visites de suivi.
+      summary: Détecte les campagnes récentes sans suivi encore à risque prédictif
+      tags:
+      - Intelligence écologique
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/intelligence/predire-survie/:
+    post:
+      operationId: intelligence_predire_survie_create
+      summary: Prédit le taux de survie attendu pour une campagne hypothétique
+      tags:
+      - Intelligence écologique
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionSurvie'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PredictionSurvie'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PredictionSurvie'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/intelligence/recommander-essence/:
+    get:
+      operationId: intelligence_recommander_essence_retrieve
+      summary: Recommande les essences les plus performantes pour une province
+      parameters:
+      - in: query
+        name: province
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: superficie_site
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: top_n
+        schema:
+          type: integer
+      tags:
+      - Intelligence écologique
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/intelligence/reentrainer/:
+    post:
+      operationId: intelligence_reentrainer_create
+      description: Permet de déclencher un réentraînement depuis l'admin sans passer
+        par le terminal.
+      summary: Réentraîne le modèle de prédiction (admin)
+      tags:
+      - Intelligence écologique
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/journal/:
+    get:
+      operationId: journal_list
+      description: Lecture seule (personne ne modifie un journal d'audit), réservé
+        aux administrateurs.
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+          enum:
+          - CONNEXION
+          - CONNEXION_ECHOUEE
+          - CREATION
+          - DESACTIVATION
+          - MODIFICATION
+          - SUPPRESSION
+        description: |-
+          * `CREATION` - Création
+          * `MODIFICATION` - Modification
+          * `SUPPRESSION` - Suppression
+          * `CONNEXION` - Connexion
+          * `CONNEXION_ECHOUEE` - Connexion échouée
+          * `DESACTIVATION` - Désactivation de compte
+      - in: query
+        name: date_debut
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: date_fin
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: modele
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: utilisateur
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - journal
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedJournalActiviteList'
+          description: ''
+  /api/journal/{id}/:
+    get:
+      operationId: journal_retrieve
+      description: Lecture seule (personne ne modifie un journal d'audit), réservé
+        aux administrateurs.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Entrée du journal d'activité.
+        required: true
+      tags:
+      - journal
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalActivite'
+          description: ''
+  /api/me/change-password/:
+    post:
+      operationId: me_change_password_create
+      description: Endpoints pour l'utilisateur courant, hors module admin.
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/me/update/:
+    patch:
+      operationId: me_update_partial_update
+      description: Endpoints pour l'utilisateur courant, hors module admin.
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/notifications/:
+    get:
+      operationId: notifications_list
+      description: Chaque utilisateur ne voit que SES notifications.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/notifications/{id}/:
+    get:
+      operationId: notifications_retrieve
+      description: Chaque utilisateur ne voit que SES notifications.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/{id}/marquer_lue/:
+    post:
+      operationId: notifications_marquer_lue_create
+      description: Chaque utilisateur ne voit que SES notifications.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Notification'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Notification'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/marquer-toutes-lues/:
+    post:
+      operationId: notifications_marquer_toutes_lues_create
+      description: Chaque utilisateur ne voit que SES notifications.
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Notification'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Notification'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/non_lues/:
+    get:
+      operationId: notifications_non_lues_retrieve
+      description: Chaque utilisateur ne voit que SES notifications.
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/objectifs/:
+    get:
+      operationId: objectifs_list
+      summary: Lister les objectifs de reboisement
+      parameters:
+      - in: query
+        name: echeance_apres
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: echeance_avant
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - in: query
+        name: portee
+        schema:
+          type: string
+          enum:
+          - GLOBAL
+          - PROVINCE
+          - SITE
+        description: |-
+          * `GLOBAL` - National
+          * `PROVINCE` - Province
+          * `SITE` - Site spécifique
+      - in: query
+        name: province
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: site
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: statut
+        schema:
+          type: string
+          enum:
+          - ANNULE
+          - ATTEINT
+          - EN_COURS
+          - NON_ATTEINT
+        description: |-
+          * `EN_COURS` - En cours
+          * `ATTEINT` - Atteint
+          * `NON_ATTEINT` - Non atteint (échéance dépassée)
+          * `ANNULE` - Annulé
+      tags:
+      - Objectifs
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedObjectifReboisementList'
+          description: ''
+    post:
+      operationId: objectifs_create
+      summary: Créer un objectif
+      tags:
+      - Objectifs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectifReboisement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ObjectifReboisement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ObjectifReboisement'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectifReboisement'
+          description: ''
+  /api/objectifs/{id}/:
+    get:
+      operationId: objectifs_retrieve
+      summary: Détail d'un objectif avec progression calculée
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Objectif de reboisement.
+        required: true
+      tags:
+      - Objectifs
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectifReboisement'
+          description: ''
+    put:
+      operationId: objectifs_update
+      summary: Modifier un objectif
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Objectif de reboisement.
+        required: true
+      tags:
+      - Objectifs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectifReboisement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ObjectifReboisement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ObjectifReboisement'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectifReboisement'
+          description: ''
+    patch:
+      operationId: objectifs_partial_update
+      summary: Modifier partiellement un objectif
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Objectif de reboisement.
+        required: true
+      tags:
+      - Objectifs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedObjectifReboisement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedObjectifReboisement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedObjectifReboisement'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectifReboisement'
+          description: ''
+    delete:
+      operationId: objectifs_destroy
+      summary: Supprimer un objectif (nécessite ?confirm=true)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Objectif de reboisement.
+        required: true
+      tags:
+      - Objectifs
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/partenaires/:
+    get:
+      operationId: partenaires_list
+      parameters:
+      - in: query
+        name: actif
+        schema:
+          type: boolean
+      - in: query
+        name: nom
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - in: query
+        name: pays
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: type_partenaire
+        schema:
+          type: string
+          enum:
+          - AUTRE
+          - BAILLEUR_INTL
+          - ENTREPRISE
+          - ETAT
+          - ONG
+        description: |-
+          * `ONG` - ONG
+          * `ETAT` - État / Ministère
+          * `ENTREPRISE` - Entreprise privée
+          * `BAILLEUR_INTL` - Bailleur international
+          * `AUTRE` - Autre
+      tags:
+      - partenaires
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPartenaireList'
+          description: ''
+    post:
+      operationId: partenaires_create
+      tags:
+      - partenaires
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Partenaire'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Partenaire'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Partenaire'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Partenaire'
+          description: ''
+  /api/partenaires/{id}/:
+    get:
+      operationId: partenaires_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Partenaire.
+        required: true
+      tags:
+      - partenaires
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Partenaire'
+          description: ''
+    put:
+      operationId: partenaires_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Partenaire.
+        required: true
+      tags:
+      - partenaires
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Partenaire'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Partenaire'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Partenaire'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Partenaire'
+          description: ''
+    patch:
+      operationId: partenaires_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Partenaire.
+        required: true
+      tags:
+      - partenaires
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPartenaire'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPartenaire'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPartenaire'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Partenaire'
+          description: ''
+    delete:
+      operationId: partenaires_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Partenaire.
+        required: true
+      tags:
+      - partenaires
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/photos-suivi/:
+    get:
+      operationId: photos_suivi_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - in: query
+        name: suivi
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - photos-suivi
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPhotoSuiviList'
+          description: ''
+    post:
+      operationId: photos_suivi_create
+      tags:
+      - photos-suivi
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhotoSuivi'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhotoSuivi'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotoSuivi'
+          description: ''
+  /api/photos-suivi/{id}/:
+    get:
+      operationId: photos_suivi_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Photo de suivi.
+        required: true
+      tags:
+      - photos-suivi
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotoSuivi'
+          description: ''
+    put:
+      operationId: photos_suivi_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Photo de suivi.
+        required: true
+      tags:
+      - photos-suivi
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhotoSuivi'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhotoSuivi'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotoSuivi'
+          description: ''
+    patch:
+      operationId: photos_suivi_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Photo de suivi.
+        required: true
+      tags:
+      - photos-suivi
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPhotoSuivi'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPhotoSuivi'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotoSuivi'
+          description: ''
+    delete:
+      operationId: photos_suivi_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Photo de suivi.
+        required: true
+      tags:
+      - photos-suivi
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/sites/:
+    get:
+      operationId: sites_list
+      description: CRUD complet des sites + recherche + filtres combinables.
+      parameters:
+      - in: query
+        name: localite
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - in: query
+        name: province
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: statut
+        schema:
+          type: string
+          enum:
+          - EN_COURS
+          - PLANIFIE
+          - SUSPENDU
+          - TERMINE
+        description: |-
+          * `PLANIFIE` - Planifié
+          * `EN_COURS` - En cours
+          * `TERMINE` - Terminé
+          * `SUSPENDU` - Suspendu
+      - in: query
+        name: superficie_max
+        schema:
+          type: number
+      - in: query
+        name: superficie_min
+        schema:
+          type: number
+      - in: query
+        name: taux_survie_min
+        schema:
+          type: number
+      tags:
+      - sites
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSiteReboisementListList'
+          description: ''
+    post:
+      operationId: sites_create
+      description: CRUD complet des sites + recherche + filtres combinables.
+      tags:
+      - sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteReboisementWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SiteReboisementWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SiteReboisementWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteReboisementWrite'
+          description: ''
+  /api/sites-geojson/:
+    get:
+      operationId: sites_geojson_retrieve
+      description: |-
+        Renvoie tous les sites géolocalisés au format GeoJSON standard —
+        directement exploitable par une carte (Leaflet, Google Maps, etc.)
+      summary: Sites au format GeoJSON pour affichage cartographique
+      tags:
+      - Sites
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/sites-proximite/:
+    get:
+      operationId: sites_proximite_retrieve
+      description: |-
+        Trouve les sites dans un rayon donné autour d'un point GPS — utile pour
+        un agent terrain qui veut voir "les sites proches de ma position actuelle".
+      summary: Sites à proximité d'un point GPS (rayon en km)
+      parameters:
+      - in: query
+        name: lat
+        schema:
+          type: number
+          format: double
+        description: Latitude du point de référence
+        required: true
+      - in: query
+        name: lon
+        schema:
+          type: number
+          format: double
+        description: Longitude du point de référence
+        required: true
+      - in: query
+        name: rayon_km
+        schema:
+          type: number
+          format: double
+        description: 'Rayon de recherche (défaut: 50 km)'
+      tags:
+      - Sites
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/sites/{id}/:
+    get:
+      operationId: sites_retrieve
+      description: CRUD complet des sites + recherche + filtres combinables.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Site de reboisement.
+        required: true
+      tags:
+      - sites
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteReboisementList'
+          description: ''
+    put:
+      operationId: sites_update
+      description: CRUD complet des sites + recherche + filtres combinables.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Site de reboisement.
+        required: true
+      tags:
+      - sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteReboisementWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SiteReboisementWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SiteReboisementWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteReboisementWrite'
+          description: ''
+    patch:
+      operationId: sites_partial_update
+      description: CRUD complet des sites + recherche + filtres combinables.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Site de reboisement.
+        required: true
+      tags:
+      - sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteReboisementWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteReboisementWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteReboisementWrite'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteReboisementWrite'
+          description: ''
+    delete:
+      operationId: sites_destroy
+      description: Suppression avec confirmation obligatoire (?confirm=true).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Site de reboisement.
+        required: true
+      tags:
+      - sites
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/sites/{id}/score-ecologique/:
+    get:
+      operationId: sites_score_ecologique_retrieve
+      summary: Score écologique détaillé d'un site (explicable)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Sites
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/sites/{id}/statistiques/:
+    get:
+      operationId: sites_statistiques_retrieve
+      description: Détail des stats du site — utile pour le dashboard côté JavaFX.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Site de reboisement.
+        required: true
+      tags:
+      - sites
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteReboisementList'
+          description: ''
+  /api/suivis/:
+    get:
+      operationId: suivis_list
+      parameters:
+      - in: query
+        name: campagne
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: date_debut
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: date_fin
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: essence
+        schema:
+          type: string
+          format: uuid
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: site
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: taux_survie_max
+        schema:
+          type: number
+      - in: query
+        name: taux_survie_min
+        schema:
+          type: number
+      tags:
+      - suivis
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSuiviCroissanceList'
+          description: ''
+    post:
+      operationId: suivis_create
+      tags:
+      - suivis
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuiviCroissance'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SuiviCroissance'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SuiviCroissance'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuiviCroissance'
+          description: ''
+  /api/suivis/{id}/:
+    get:
+      operationId: suivis_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Suivi de croissance.
+        required: true
+      tags:
+      - suivis
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuiviCroissance'
+          description: ''
+    put:
+      operationId: suivis_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Suivi de croissance.
+        required: true
+      tags:
+      - suivis
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuiviCroissance'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SuiviCroissance'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SuiviCroissance'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuiviCroissance'
+          description: ''
+    patch:
+      operationId: suivis_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Suivi de croissance.
+        required: true
+      tags:
+      - suivis
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSuiviCroissance'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSuiviCroissance'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSuiviCroissance'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuiviCroissance'
+          description: ''
+    delete:
+      operationId: suivis_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Suivi de croissance.
+        required: true
+      tags:
+      - suivis
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/users/:
+    get:
+      operationId: users_list
+      description: |-
+        Module Utilisateurs — réservé à l'administrateur.
+        CRUD complet + recherche + filtres.
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          type: string
+          enum:
+          - ADMIN
+          - AGENT
+        description: |-
+          * `ADMIN` - Administrateur
+          * `AGENT` - Agent de terrain
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: two_fa_enabled
+        schema:
+          type: boolean
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserListList'
+          description: ''
+    post:
+      operationId: users_create
+      description: |-
+        Module Utilisateurs — réservé à l'administrateur.
+        CRUD complet + recherche + filtres.
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreate'
+          description: ''
+  /api/users/{id}/:
+    get:
+      operationId: users_retrieve
+      description: |-
+        Module Utilisateurs — réservé à l'administrateur.
+        CRUD complet + recherche + filtres.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Utilisateur.
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+          description: ''
+    put:
+      operationId: users_update
+      description: |-
+        Module Utilisateurs — réservé à l'administrateur.
+        CRUD complet + recherche + filtres.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Utilisateur.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdate'
+          description: ''
+    patch:
+      operationId: users_partial_update
+      description: |-
+        Module Utilisateurs — réservé à l'administrateur.
+        CRUD complet + recherche + filtres.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Utilisateur.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdate'
+          description: ''
+    delete:
+      operationId: users_destroy
+      description: |-
+        Suppression avec confirmation obligatoire.
+        Le client doit envoyer ?confirm=true, sinon on refuse (au lieu d'un DELETE silencieux).
+        On désactive le compte plutôt que de le supprimer en dur (soft delete),
+        pour préserver l'historique des campagnes/suivis liés à cet utilisateur.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Utilisateur.
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/users/{id}/reactivate/:
+    post:
+      operationId: users_reactivate_create
+      description: Réactive un compte désactivé.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) Utilisateur.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserList'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserList'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserList'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+          description: ''
+components:
+  schemas:
+    ActionEnum:
+      enum:
+      - CREATION
+      - MODIFICATION
+      - SUPPRESSION
+      - CONNEXION
+      - CONNEXION_ECHOUEE
+      - DESACTIVATION
+      type: string
+      description: |-
+        * `CREATION` - Création
+        * `MODIFICATION` - Modification
+        * `SUPPRESSION` - Suppression
+        * `CONNEXION` - Connexion
+        * `CONNEXION_ECHOUEE` - Connexion échouée
+        * `DESACTIVATION` - Désactivation de compte
+    BudgetCampagne:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        campagne:
+          type: string
+          format: uuid
+        campagne_info:
+          type: string
+          readOnly: true
+        budget_alloue:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        cout_reel:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        devise:
+          $ref: '#/components/schemas/DeviseEnum'
+        ecart_budgetaire:
+          type: string
+          readOnly: true
+        cout_par_plant_survivant:
+          type: string
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - campagne
+      - campagne_info
+      - cout_par_plant_survivant
+      - ecart_budgetaire
+      - id
+      - updated_at
+    CampagnePlantationList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+        site_nom:
+          type: string
+          readOnly: true
+        essence:
+          type: string
+          format: uuid
+        essence_nom:
+          type: string
+          readOnly: true
+        date_plantation:
+          type: string
+          format: date
+        nombre_plants:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+        responsable:
+          type: string
+          format: uuid
+          nullable: true
+        taux_survie_moyen:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - date_plantation
+      - essence
+      - essence_nom
+      - id
+      - nombre_plants
+      - site
+      - site_nom
+      - taux_survie_moyen
+      - updated_at
+    CampagnePlantationWrite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+        essence:
+          type: string
+          format: uuid
+        date_plantation:
+          type: string
+          format: date
+        nombre_plants:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+        responsable:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - date_plantation
+      - essence
+      - id
+      - nombre_plants
+      - site
+    DeviseEnum:
+      enum:
+      - XAF
+      - EUR
+      - USD
+      type: string
+      description: |-
+        * `XAF` - Franc CFA (XAF)
+        * `EUR` - Euro
+        * `USD` - Dollar US
+    Essence:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 100
+        nom_scientifique:
+          type: string
+          maxLength: 150
+        croissance_rapide:
+          type: boolean
+      required:
+      - id
+      - nom
+    Financement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        partenaire:
+          type: string
+          format: uuid
+        partenaire_nom:
+          type: string
+          readOnly: true
+        campagne:
+          type: string
+          format: uuid
+          nullable: true
+        campagne_info:
+          type: string
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          nullable: true
+          description: Financement global d'un site (hors campagne précise).
+        site_nom:
+          type: string
+          readOnly: true
+        montant:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        devise:
+          $ref: '#/components/schemas/DeviseEnum'
+        date_financement:
+          type: string
+          format: date
+        reference:
+          type: string
+          description: Numéro de convention, référence bancaire...
+          maxLength: 100
+        description:
+          type: string
+        enregistre_par:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - campagne_info
+      - created_at
+      - date_financement
+      - id
+      - montant
+      - partenaire
+      - partenaire_nom
+      - site_nom
+    JournalActivite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        utilisateur:
+          type: string
+          format: uuid
+          nullable: true
+        utilisateur_nom:
+          type: string
+          readOnly: true
+          default: Système
+        utilisateur_email:
+          type: string
+          readOnly: true
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        modele:
+          type: string
+          description: 'Nom du modèle concerné (ex: SiteReboisement)'
+          maxLength: 100
+        objet_id:
+          type: string
+          maxLength: 100
+        objet_repr:
+          type: string
+          description: Représentation lisible de l'objet
+          maxLength: 255
+        adresse_ip:
+          type: string
+          nullable: true
+        date_action:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - date_action
+      - id
+      - modele
+      - utilisateur_email
+      - utilisateur_nom
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        type_notification:
+          $ref: '#/components/schemas/TypeNotificationEnum'
+        titre:
+          type: string
+          maxLength: 200
+        message:
+          type: string
+        lue:
+          type: boolean
+        lien_objet_id:
+          type: string
+          maxLength: 100
+        lien_modele:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - message
+      - titre
+      - type_notification
+    ObjectifReboisement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        titre:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        portee:
+          $ref: '#/components/schemas/PorteeEnum'
+        province:
+          type: string
+          maxLength: 100
+        site:
+          type: string
+          format: uuid
+          nullable: true
+        site_nom:
+          type: string
+          readOnly: true
+        nombre_plants_cible:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+        taux_survie_minimum_vise:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        date_debut:
+          type: string
+          format: date
+        date_echeance:
+          type: string
+          format: date
+        statut:
+          $ref: '#/components/schemas/ObjectifReboisementStatutEnum'
+        statut_calcule:
+          type: string
+          readOnly: true
+        responsable:
+          type: string
+          format: uuid
+          nullable: true
+        responsable_nom:
+          type: string
+          readOnly: true
+        plants_realises:
+          type: string
+          readOnly: true
+        taux_survie_realise:
+          type: string
+          readOnly: true
+        progression_pourcentage:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - date_debut
+      - date_echeance
+      - id
+      - nombre_plants_cible
+      - plants_realises
+      - progression_pourcentage
+      - responsable_nom
+      - site_nom
+      - statut_calcule
+      - taux_survie_realise
+      - titre
+      - updated_at
+    ObjectifReboisementStatutEnum:
+      enum:
+      - EN_COURS
+      - ATTEINT
+      - NON_ATTEINT
+      - ANNULE
+      type: string
+      description: |-
+        * `EN_COURS` - En cours
+        * `ATTEINT` - Atteint
+        * `NON_ATTEINT` - Non atteint (échéance dépassée)
+        * `ANNULE` - Annulé
+    PaginatedBudgetCampagneList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetCampagne'
+    PaginatedCampagnePlantationListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampagnePlantationList'
+    PaginatedEssenceList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Essence'
+    PaginatedFinancementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Financement'
+    PaginatedJournalActiviteList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalActivite'
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    PaginatedObjectifReboisementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectifReboisement'
+    PaginatedPartenaireList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Partenaire'
+    PaginatedPhotoSuiviList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhotoSuivi'
+    PaginatedSiteReboisementListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteReboisementList'
+    PaginatedSuiviCroissanceList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuiviCroissance'
+    PaginatedUserListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserList'
+    Partenaire:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 200
+        type_partenaire:
+          $ref: '#/components/schemas/TypePartenaireEnum'
+        pays:
+          type: string
+          maxLength: 100
+        contact_nom:
+          type: string
+          maxLength: 150
+        contact_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        contact_telephone:
+          type: string
+          maxLength: 30
+        actif:
+          type: boolean
+        notes:
+          type: string
+        montant_total_finance:
+          type: string
+          readOnly: true
+        nombre_financements:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - montant_total_finance
+      - nom
+      - nombre_financements
+      - type_partenaire
+      - updated_at
+    PatchedBudgetCampagne:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        campagne:
+          type: string
+          format: uuid
+        campagne_info:
+          type: string
+          readOnly: true
+        budget_alloue:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        cout_reel:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        devise:
+          $ref: '#/components/schemas/DeviseEnum'
+        ecart_budgetaire:
+          type: string
+          readOnly: true
+        cout_par_plant_survivant:
+          type: string
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedCampagnePlantationWrite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+        essence:
+          type: string
+          format: uuid
+        date_plantation:
+          type: string
+          format: date
+        nombre_plants:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+        responsable:
+          type: string
+          format: uuid
+          nullable: true
+    PatchedEssence:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 100
+        nom_scientifique:
+          type: string
+          maxLength: 150
+        croissance_rapide:
+          type: boolean
+    PatchedFinancement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        partenaire:
+          type: string
+          format: uuid
+        partenaire_nom:
+          type: string
+          readOnly: true
+        campagne:
+          type: string
+          format: uuid
+          nullable: true
+        campagne_info:
+          type: string
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          nullable: true
+          description: Financement global d'un site (hors campagne précise).
+        site_nom:
+          type: string
+          readOnly: true
+        montant:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        devise:
+          $ref: '#/components/schemas/DeviseEnum'
+        date_financement:
+          type: string
+          format: date
+        reference:
+          type: string
+          description: Numéro de convention, référence bancaire...
+          maxLength: 100
+        description:
+          type: string
+        enregistre_par:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedObjectifReboisement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        titre:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        portee:
+          $ref: '#/components/schemas/PorteeEnum'
+        province:
+          type: string
+          maxLength: 100
+        site:
+          type: string
+          format: uuid
+          nullable: true
+        site_nom:
+          type: string
+          readOnly: true
+        nombre_plants_cible:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+        taux_survie_minimum_vise:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        date_debut:
+          type: string
+          format: date
+        date_echeance:
+          type: string
+          format: date
+        statut:
+          $ref: '#/components/schemas/ObjectifReboisementStatutEnum'
+        statut_calcule:
+          type: string
+          readOnly: true
+        responsable:
+          type: string
+          format: uuid
+          nullable: true
+        responsable_nom:
+          type: string
+          readOnly: true
+        plants_realises:
+          type: string
+          readOnly: true
+        taux_survie_realise:
+          type: string
+          readOnly: true
+        progression_pourcentage:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedPartenaire:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 200
+        type_partenaire:
+          $ref: '#/components/schemas/TypePartenaireEnum'
+        pays:
+          type: string
+          maxLength: 100
+        contact_nom:
+          type: string
+          maxLength: 150
+        contact_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        contact_telephone:
+          type: string
+          maxLength: 30
+        actif:
+          type: boolean
+        notes:
+          type: string
+        montant_total_finance:
+          type: string
+          readOnly: true
+        nombre_financements:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedPhotoSuivi:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        suivi:
+          type: string
+          format: uuid
+        image:
+          type: string
+          format: uri
+        legende:
+          type: string
+          maxLength: 255
+        prise_par:
+          type: string
+          format: uuid
+          nullable: true
+        prise_par_nom:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedSiteReboisementWrite:
+      type: object
+      description: 'Création / modification : champs simples uniquement.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 150
+        localite:
+          type: string
+          maxLength: 150
+        province:
+          type: string
+          maxLength: 100
+        superficie_hectares:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        statut:
+          $ref: '#/components/schemas/StatutC2fEnum'
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        responsable:
+          type: string
+          format: uuid
+          nullable: true
+    PatchedSuiviCroissance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        campagne:
+          type: string
+          format: uuid
+        campagne_info:
+          type: string
+          readOnly: true
+        site_nom:
+          type: string
+          readOnly: true
+        essence_nom:
+          type: string
+          readOnly: true
+        date_controle:
+          type: string
+          format: date
+        taux_survie:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Pourcentage de plants ayant survécu (0 à 100).
+        nombre_plants_vivants:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        observations:
+          type: string
+        controle_par:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedUserUpdate:
+      type: object
+      description: 'Mise à jour par l''admin : peut changer rôle, statut actif, etc.'
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+    PhotoSuivi:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        suivi:
+          type: string
+          format: uuid
+        image:
+          type: string
+          format: uri
+        legende:
+          type: string
+          maxLength: 255
+        prise_par:
+          type: string
+          format: uuid
+          nullable: true
+        prise_par_nom:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - image
+      - prise_par_nom
+      - suivi
+    PorteeEnum:
+      enum:
+      - GLOBAL
+      - PROVINCE
+      - SITE
+      type: string
+      description: |-
+        * `GLOBAL` - National
+        * `PROVINCE` - Province
+        * `SITE` - Site spécifique
+    PredictionSurvie:
+      type: object
+      properties:
+        essence:
+          type: string
+        province:
+          type: string
+        superficie_site:
+          type: number
+          format: double
+          minimum: 0.01
+        nombre_plants:
+          type: integer
+          minimum: 1
+        mois_plantation:
+          type: integer
+          maximum: 12
+          minimum: 1
+        croissance_rapide:
+          type: boolean
+          default: false
+      required:
+      - essence
+      - mois_plantation
+      - nombre_plants
+      - province
+      - superficie_site
+    RoleEnum:
+      enum:
+      - ADMIN
+      - AGENT
+      type: string
+      description: |-
+        * `ADMIN` - Administrateur
+        * `AGENT` - Agent de terrain
+    SiteReboisementList:
+      type: object
+      description: 'Liste : version allégée avec le taux de survie moyen calculé.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 150
+        localite:
+          type: string
+          maxLength: 150
+        province:
+          type: string
+          maxLength: 100
+        superficie_hectares:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        statut:
+          $ref: '#/components/schemas/StatutC2fEnum'
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        responsable:
+          type: string
+          format: uuid
+          nullable: true
+        responsable_nom:
+          type: string
+          readOnly: true
+        nombre_campagnes:
+          type: integer
+          readOnly: true
+        taux_survie_moyen:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - localite
+      - nom
+      - nombre_campagnes
+      - responsable_nom
+      - superficie_hectares
+      - taux_survie_moyen
+      - updated_at
+    SiteReboisementWrite:
+      type: object
+      description: 'Création / modification : champs simples uniquement.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 150
+        localite:
+          type: string
+          maxLength: 150
+        province:
+          type: string
+          maxLength: 100
+        superficie_hectares:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        statut:
+          $ref: '#/components/schemas/StatutC2fEnum'
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        responsable:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - id
+      - localite
+      - nom
+      - superficie_hectares
+    StatutC2fEnum:
+      enum:
+      - PLANIFIE
+      - EN_COURS
+      - TERMINE
+      - SUSPENDU
+      type: string
+      description: |-
+        * `PLANIFIE` - Planifié
+        * `EN_COURS` - En cours
+        * `TERMINE` - Terminé
+        * `SUSPENDU` - Suspendu
+    SuiviCroissance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        campagne:
+          type: string
+          format: uuid
+        campagne_info:
+          type: string
+          readOnly: true
+        site_nom:
+          type: string
+          readOnly: true
+        essence_nom:
+          type: string
+          readOnly: true
+        date_controle:
+          type: string
+          format: date
+        taux_survie:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Pourcentage de plants ayant survécu (0 à 100).
+        nombre_plants_vivants:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        observations:
+          type: string
+        controle_par:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - campagne
+      - campagne_info
+      - created_at
+      - date_controle
+      - essence_nom
+      - id
+      - site_nom
+      - taux_survie
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TypeNotificationEnum:
+      enum:
+      - TAUX_CRITIQUE
+      - SUIVI_EN_RETARD
+      - SUIVI_A_VENIR
+      - NOUVEAU_FINANCEMENT
+      - COMPTE_CREE
+      type: string
+      description: |-
+        * `TAUX_CRITIQUE` - Taux de survie critique
+        * `SUIVI_EN_RETARD` - Suivi en retard
+        * `SUIVI_A_VENIR` - Suivi programmé bientôt
+        * `NOUVEAU_FINANCEMENT` - Nouveau financement reçu
+        * `COMPTE_CREE` - Compte créé
+    TypePartenaireEnum:
+      enum:
+      - ONG
+      - ETAT
+      - ENTREPRISE
+      - BAILLEUR_INTL
+      - AUTRE
+      type: string
+      description: |-
+        * `ONG` - ONG
+        * `ETAT` - État / Ministère
+        * `ENTREPRISE` - Entreprise privée
+        * `BAILLEUR_INTL` - Bailleur international
+        * `AUTRE` - Autre
+    UserCreate:
+      type: object
+      description: Création d'un compte par l'admin. Génère un mot de passe temporaire
+        si non fourni.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        is_active:
+          type: boolean
+      required:
+      - email
+      - first_name
+      - id
+      - last_name
+    UserList:
+      type: object
+      description: Utilisé pour la liste et le détail.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        full_name:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+        two_fa_enabled:
+          type: boolean
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+      required:
+      - created_by
+      - date_joined
+      - email
+      - first_name
+      - full_name
+      - id
+      - last_name
+      - two_fa_enabled
+    UserUpdate:
+      type: object
+      description: 'Mise à jour par l''admin : peut changer rôle, statut actif, etc.'
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+      required:
+      - first_name
+      - last_name
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
