@@ -1,4 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +19,8 @@ from .models import PhotoSuivi
 from .serializers import PhotoSuiviSerializer
 from datetime import timedelta
 from django.utils import timezone
+from django.db.models import F
+from math import radians, cos, sin, asin, sqrt
 
 
 class EssenceViewSet(viewsets.ModelViewSet):
@@ -169,3 +172,109 @@ class CalendrierSuivisView(APIView):
             'suivis_a_venir': serialize(suivis_programmes),
             'suivis_en_retard': serialize(en_retard),
         })
+
+
+class SitesGeoJSONView(APIView):
+    """
+    Renvoie tous les sites géolocalisés au format GeoJSON standard —
+    directement exploitable par une carte (Leaflet, Google Maps, etc.)
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(summary="Sites au format GeoJSON pour affichage cartographique", tags=['Sites'])
+    def get(self, request):
+        sites = SiteReboisement.objects.filter(
+            latitude__isnull=False, longitude__isnull=False
+        ).select_related('responsable')
+
+        features = []
+        for site in sites:
+            features.append({
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [float(site.longitude), float(site.latitude)]
+                },
+                "properties": {
+                    "id": str(site.id),
+                    "nom": site.nom,
+                    "localite": site.localite,
+                    "province": site.province,
+                    "statut": site.statut,
+                    "superficie_hectares": float(site.superficie_hectares),
+                    "taux_survie_moyen": site.taux_survie_moyen,
+                    "responsable": site.responsable.get_full_name() if site.responsable else None,
+                }
+            })
+
+        return Response({"type": "FeatureCollection", "features": features})
+
+
+def haversine(lat1, lon1, lat2, lon2):
+    """Distance en km entre deux points GPS (formule de Haversine)."""
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    return 2 * 6371 * asin(sqrt(a))
+
+
+class SitesProximiteView(APIView):
+    """
+    Trouve les sites dans un rayon donné autour d'un point GPS — utile pour
+    un agent terrain qui veut voir "les sites proches de ma position actuelle".
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Sites à proximité d'un point GPS (rayon en km)",
+        tags=['Sites'],
+        parameters=[
+            OpenApiParameter('lat', float, required=True, description="Latitude du point de référence"),
+            OpenApiParameter('lon', float, required=True, description="Longitude du point de référence"),
+            OpenApiParameter('rayon_km', float, required=False, description="Rayon de recherche (défaut: 50 km)"),
+        ]
+    )
+    def get(self, request):
+        try:
+            lat = float(request.query_params['lat'])
+            lon = float(request.query_params['lon'])
+        except (KeyError, ValueError):
+            return Response(
+                {'detail': "Paramètres 'lat' et 'lon' requis (nombres décimaux)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        rayon_km = float(request.query_params.get('rayon_km', 50))
+
+        sites = SiteReboisement.objects.filter(latitude__isnull=False, longitude__isnull=False)
+        resultats = []
+        for site in sites:
+            distance = haversine(lat, lon, float(site.latitude), float(site.longitude))
+            if distance <= rayon_km:
+                resultats.append({
+                    'id': site.id, 'nom': site.nom, 'localite': site.localite,
+                    'distance_km': round(distance, 2),
+                    'statut': site.statut,
+                })
+
+        resultats.sort(key=lambda x: x['distance_km'])
+        return Response({'rayon_km': rayon_km, 'nombre_sites_trouves': len(resultats), 'sites': resultats})
+
+
+class DashboardCarteProvinceView(APIView):
+    """Agrégation géographique enrichie — centroïde par province + statistiques, pour affichage carte-choroplèthe."""
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(summary="Statistiques géographiques agrégées par province (pour carte)", tags=['Dashboard'])
+    def get(self, request):
+        from django.db.models import Avg, Count, Sum
+
+        provinces = SiteReboisement.objects.exclude(province='').values('province').annotate(
+            nb_sites=Count('id'),
+            latitude_moyenne=Avg('latitude'),
+            longitude_moyenne=Avg('longitude'),
+            superficie_totale=Sum('superficie_hectares'),
+            taux_survie_moyen=Avg('campagnes__suivis__taux_survie'),
+        ).order_by('-nb_sites')
+
+        return Response(list(provinces))

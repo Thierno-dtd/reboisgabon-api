@@ -4,6 +4,7 @@ from .views import (
     DashboardParProvinceView, DashboardEvolutionTemporelleView,
     DashboardAlertesView, DashboardResponsablesView, DashboardFinancierView
 )
+from apps.reforestation.views import DashboardCarteProvinceView
 
 urlpatterns = [
     path('overview/', DashboardOverviewView.as_view(), name='dashboard-overview'),
@@ -17,4 +18,5 @@ urlpatterns = [
 
 urlpatterns += [
     path('financier/', DashboardFinancierView.as_view(), name='dashboard-financier'),
+    path('carte-provinces/', DashboardCarteProvinceView.as_view(), name='dashboard-carte-provinces'),
 ]
