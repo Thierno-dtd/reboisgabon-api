@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 class Essence(models.Model):
@@ -188,3 +189,106 @@ class PhotoSuivi(models.Model):
 
     def __str__(self):
         return f"Photo — {self.suivi} ({self.created_at:%Y-%m-%d})"
+
+
+class ObjectifReboisement(models.Model):
+    """
+    Cible de reboisement fixée (par province, par site, ou globale) sur une période donnée.
+    La progression est calculée automatiquement à partir des campagnes réelles.
+    """
+
+    class Portee(models.TextChoices):
+        GLOBAL = 'GLOBAL', 'National'
+        PROVINCE = 'PROVINCE', 'Province'
+        SITE = 'SITE', 'Site spécifique'
+
+    class Statut(models.TextChoices):
+        EN_COURS = 'EN_COURS', 'En cours'
+        ATTEINT = 'ATTEINT', 'Atteint'
+        NON_ATTEINT = 'NON_ATTEINT', 'Non atteint (échéance dépassée)'
+        ANNULE = 'ANNULE', 'Annulé'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    titre = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+
+    portee = models.CharField(max_length=10, choices=Portee.choices, default=Portee.GLOBAL)
+    province = models.CharField(max_length=100, blank=True)
+    site = models.ForeignKey(
+        SiteReboisement, on_delete=models.CASCADE, null=True, blank=True, related_name='objectifs'
+    )
+
+    nombre_plants_cible = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    taux_survie_minimum_vise = models.DecimalField(
+        max_digits=5, decimal_places=2, default=70,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+
+    date_debut = models.DateField()
+    date_echeance = models.DateField()
+    statut = models.CharField(max_length=15, choices=Statut.choices, default=Statut.EN_COURS)
+
+    responsable = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='objectifs_geres'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'objectifs_reboisement'
+        verbose_name = 'Objectif de reboisement'
+        verbose_name_plural = 'Objectifs de reboisement'
+        ordering = ['date_echeance']
+        indexes = [models.Index(fields=['statut']), models.Index(fields=['date_echeance'])]
+
+    def __str__(self):
+        return f"{self.titre} ({self.nombre_plants_cible} plants)"
+
+    def clean(self):
+        if self.portee == self.Portee.SITE and not self.site:
+            raise ValidationError("Un objectif de portée 'Site' doit référencer un site.")
+        if self.portee == self.Portee.PROVINCE and not self.province:
+            raise ValidationError("Un objectif de portée 'Province' doit préciser une province.")
+        if self.date_echeance <= self.date_debut:
+            raise ValidationError("La date d'échéance doit être postérieure à la date de début.")
+
+    def _campagnes_concernees(self):
+        qs = CampagnePlantation.objects.filter(
+            date_plantation__gte=self.date_debut, date_plantation__lte=self.date_echeance
+        )
+        if self.portee == self.Portee.SITE:
+            qs = qs.filter(site=self.site)
+        elif self.portee == self.Portee.PROVINCE:
+            qs = qs.filter(site__province=self.province)
+        return qs
+
+    @property
+    def plants_realises(self):
+        from django.db.models import Sum
+        return self._campagnes_concernees().aggregate(t=Sum('nombre_plants'))['t'] or 0
+
+    @property
+    def taux_survie_realise(self):
+        from django.db.models import Avg
+        result = SuiviCroissance.objects.filter(
+            campagne__in=self._campagnes_concernees()
+        ).aggregate(m=Avg('taux_survie'))
+        return round(result['m'], 2) if result['m'] is not None else None
+
+    @property
+    def progression_pourcentage(self):
+        if self.nombre_plants_cible == 0:
+            return 0
+        return round(min(self.plants_realises / self.nombre_plants_cible * 100, 100), 1)
+
+    @property
+    def statut_calcule(self):
+        """Recalcule dynamiquement le statut réel (sans écraser un statut ANNULE manuel)."""
+        if self.statut == self.Statut.ANNULE:
+            return self.statut
+        if self.progression_pourcentage >= 100:
+            return self.Statut.ATTEINT
+        if timezone.now().date() > self.date_echeance:
+            return self.Statut.NON_ATTEINT
+        return self.Statut.EN_COURS

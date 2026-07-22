@@ -121,3 +121,35 @@ class PhotoSuiviSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             validated_data['prise_par'] = request.user
         return super().create(validated_data)
+
+
+class ObjectifReboisementSerializer(serializers.ModelSerializer):
+    plants_realises = serializers.SerializerMethodField()
+    taux_survie_realise = serializers.SerializerMethodField()
+    progression_pourcentage = serializers.SerializerMethodField()
+    statut_calcule = serializers.SerializerMethodField()
+    site_nom = serializers.CharField(source='site.nom', read_only=True, default=None)
+    responsable_nom = serializers.CharField(source='responsable.get_full_name', read_only=True, default=None)
+
+    class Meta:
+        model = ObjectifReboisement
+        fields = [
+            'id', 'titre', 'description', 'portee', 'province', 'site', 'site_nom',
+            'nombre_plants_cible', 'taux_survie_minimum_vise', 'date_debut', 'date_echeance',
+            'statut', 'statut_calcule', 'responsable', 'responsable_nom',
+            'plants_realises', 'taux_survie_realise', 'progression_pourcentage',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_plants_realises(self, obj):
+        return obj.plants_realises
+
+    def get_taux_survie_realise(self, obj):
+        return obj.taux_survie_realise
+
+    def get_progression_pourcentage(self, obj):
+        return obj.progression_pourcentage
+
+    def get_statut_calcule(self, obj):
+        return obj.statut_calcule

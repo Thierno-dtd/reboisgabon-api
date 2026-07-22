@@ -98,6 +98,7 @@ class Command(BaseCommand):
         self._seed_financements(partenaires, sites, campagnes)
         self._seed_budgets(campagnes)
         self._seed_suivis(campagnes, agents)
+        self._seed_objectifs(sites)
 
         self.stdout.write(self.style.SUCCESS(
             f"\nSeed terminé :\n"
@@ -283,5 +284,52 @@ class Command(BaseCommand):
                     'budget_alloue': round(budget_alloue, 2),
                     'cout_reel': round(cout_reel, 2),
                     'devise': 'XAF',
+                }
+            )
+
+    def _seed_objectifs(self, sites):
+        from apps.reforestation.models import ObjectifReboisement
+        from datetime import date
+
+        provinces_uniques = list(set(s.province for s in sites if s.province))
+
+        # Objectif national
+        ObjectifReboisement.objects.get_or_create(
+            titre="Plan national de reboisement 2025-2027",
+            defaults={
+                'description': "Objectif national de restauration du couvert forestier.",
+                'portee': ObjectifReboisement.Portee.GLOBAL,
+                'nombre_plants_cible': 300000,
+                'taux_survie_minimum_vise': 75,
+                'date_debut': date(2025, 1, 1),
+                'date_echeance': date(2027, 12, 31),
+            }
+        )
+
+        # Objectifs par province (échantillon)
+        for province in provinces_uniques[:4]:
+            ObjectifReboisement.objects.get_or_create(
+                titre=f"Programme de reboisement — {province}",
+                defaults={
+                    'portee': ObjectifReboisement.Portee.PROVINCE,
+                    'province': province,
+                    'nombre_plants_cible': random.randint(20000, 60000),
+                    'taux_survie_minimum_vise': random.choice([65, 70, 75, 80]),
+                    'date_debut': date(2025, 1, 1),
+                    'date_echeance': date(2026, 12, 31),
+                }
+            )
+
+        # Objectif sur un site précis (échéance proche pour tester le calcul "en retard")
+        if sites:
+            ObjectifReboisement.objects.get_or_create(
+                titre=f"Objectif pilote — {sites[0].nom}",
+                defaults={
+                    'portee': ObjectifReboisement.Portee.SITE,
+                    'site': sites[0],
+                    'nombre_plants_cible': 15000,
+                    'taux_survie_minimum_vise': 70,
+                    'date_debut': date(2024, 6, 1),
+                    'date_echeance': date(2025, 6, 1),  # échu -> teste NON_ATTEINT si pas 100%
                 }
             )

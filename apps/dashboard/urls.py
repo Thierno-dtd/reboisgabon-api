@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     DashboardOverviewView, DashboardParSiteView, DashboardParEssenceView,
     DashboardParProvinceView, DashboardEvolutionTemporelleView,
-    DashboardAlertesView, DashboardResponsablesView, DashboardFinancierView
+    DashboardAlertesView, DashboardResponsablesView, DashboardFinancierView,
+    DashboardObjectifsView
 )
 from apps.reforestation.views import DashboardCarteProvinceView
 
@@ -19,4 +20,5 @@ urlpatterns = [
 urlpatterns += [
     path('financier/', DashboardFinancierView.as_view(), name='dashboard-financier'),
     path('carte-provinces/', DashboardCarteProvinceView.as_view(), name='dashboard-carte-provinces'),
+    path('objectifs/', DashboardObjectifsView.as_view(), name='dashboard-objectifs'),
 ]

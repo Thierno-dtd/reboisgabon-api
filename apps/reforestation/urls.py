@@ -1,6 +1,6 @@
 from rest_framework.routers import DefaultRouter, path
 from .views import (
-    EssenceViewSet, PhotoSuiviViewSet, SiteReboisementViewSet,
+    EssenceViewSet, ObjectifReboisementViewSet, PhotoSuiviViewSet, SiteReboisementViewSet,
     CampagnePlantationViewSet, SuiviCroissanceViewSet,
     CalendrierSuivisView, SitesGeoJSONView, SitesProximiteView
 )
@@ -11,6 +11,7 @@ router.register('sites', SiteReboisementViewSet, basename='site')
 router.register('campagnes', CampagnePlantationViewSet, basename='campagne')
 router.register('suivis', SuiviCroissanceViewSet, basename='suivi')
 router.register('photos-suivi', PhotoSuiviViewSet, basename='photo-suivi')
+router.register('objectifs', ObjectifReboisementViewSet, basename='objectif')
 
 urlpatterns = router.urls
 urlpatterns += [

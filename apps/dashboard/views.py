@@ -3,6 +3,7 @@ from multiprocessing.dummy import connection
 from django.db.models import Avg, Count, Sum, Q, F
 from django.db.models.functions import TruncMonth, TruncYear
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -14,6 +15,7 @@ from rest_framework.permissions import AllowAny
 from apps.reforestation.models import SiteReboisement, CampagnePlantation, SuiviCroissance, Essence
 from apps.accounts.models import User
 from apps.finances.models import Partenaire, Financement, BudgetCampagne
+from apps.reforestation.models import ObjectifReboisement
 
 
 class DashboardOverviewView(APIView):
@@ -333,3 +335,39 @@ class HealthCheckView(APIView):
             'status': 'ok' if db_ok else 'degraded',
             'database': 'connected' if db_ok else 'unavailable',
         }, status=200 if db_ok else 503)
+
+
+@extend_schema(summary="Vue d'ensemble des objectifs (progression, retards)", tags=['Dashboard'])
+class DashboardObjectifsView(APIView):
+    """
+    Vue synthétique de tous les objectifs actifs — le tableau de bord
+    que les décideurs consultent en priorité pour suivre les engagements.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        objectifs = ObjectifReboisement.objects.exclude(
+            statut=ObjectifReboisement.Statut.ANNULE
+        ).select_related('site')
+
+        data = []
+        for obj in objectifs:
+            data.append({
+                'id': obj.id,
+                'titre': obj.titre,
+                'portee': obj.portee,
+                'progression_pourcentage': obj.progression_pourcentage,
+                'plants_realises': obj.plants_realises,
+                'nombre_plants_cible': obj.nombre_plants_cible,
+                'taux_survie_realise': obj.taux_survie_realise,
+                'taux_survie_minimum_vise': float(obj.taux_survie_minimum_vise),
+                'date_echeance': obj.date_echeance,
+                'statut_calcule': obj.statut_calcule,
+            })
+
+        return Response({
+            'total_objectifs_actifs': len(data),
+            'objectifs_atteints': sum(1 for o in data if o['statut_calcule'] == 'ATTEINT'),
+            'objectifs_en_retard': sum(1 for o in data if o['statut_calcule'] == 'NON_ATTEINT'),
+            'objectifs': data,
+        })

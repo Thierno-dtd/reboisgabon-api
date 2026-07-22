@@ -1,6 +1,6 @@
 import django_filters
 from django.db.models import Avg
-from .models import SiteReboisement, CampagnePlantation, SuiviCroissance
+from .models import ObjectifReboisement, SiteReboisement, CampagnePlantation, SuiviCroissance
 
 
 class SiteReboisementFilter(django_filters.FilterSet):
@@ -83,3 +83,16 @@ class SuiviCroissanceFilter(django_filters.FilterSet):
             'campagne', 'site', 'essence',
             'date_debut', 'date_fin', 'taux_survie_min', 'taux_survie_max',
         ]
+
+
+class ObjectifReboisementFilter(django_filters.FilterSet):
+    portee = django_filters.ChoiceFilter(choices=ObjectifReboisement.Portee.choices)
+    statut = django_filters.ChoiceFilter(choices=ObjectifReboisement.Statut.choices)
+    province = django_filters.CharFilter(lookup_expr='icontains')
+    site = django_filters.UUIDFilter(field_name='site__id')
+    echeance_avant = django_filters.DateFilter(field_name='date_echeance', lookup_expr='lte')
+    echeance_apres = django_filters.DateFilter(field_name='date_echeance', lookup_expr='gte')
+
+    class Meta:
+        model = ObjectifReboisement
+        fields = ['portee', 'statut', 'province', 'site', 'echeance_avant', 'echeance_apres']

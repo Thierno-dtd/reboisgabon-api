@@ -1,5 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -21,6 +21,9 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db.models import F
 from math import radians, cos, sin, asin, sqrt
+from .filters import ObjectifReboisementFilter
+from .serializers import ObjectifReboisementSerializer
+from .models import ObjectifReboisement
 
 
 class EssenceViewSet(viewsets.ModelViewSet):
@@ -278,3 +281,30 @@ class DashboardCarteProvinceView(APIView):
         ).order_by('-nb_sites')
 
         return Response(list(provinces))
+
+
+@extend_schema_view(
+    list=extend_schema(summary="Lister les objectifs de reboisement", tags=['Objectifs']),
+    create=extend_schema(summary="Créer un objectif", tags=['Objectifs']),
+    retrieve=extend_schema(summary="Détail d'un objectif avec progression calculée", tags=['Objectifs']),
+    update=extend_schema(summary="Modifier un objectif", tags=['Objectifs']),
+    partial_update=extend_schema(summary="Modifier partiellement un objectif", tags=['Objectifs']),
+    destroy=extend_schema(summary="Supprimer un objectif (nécessite ?confirm=true)", tags=['Objectifs']),
+)
+class ObjectifReboisementViewSet(viewsets.ModelViewSet):
+    queryset = ObjectifReboisement.objects.select_related('site', 'responsable').all()
+    serializer_class = ObjectifReboisementSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ObjectifReboisementFilter
+    search_fields = ['titre', 'description', 'province']
+    ordering_fields = ['date_echeance', 'nombre_plants_cible']
+    ordering = ['date_echeance']
+
+    def destroy(self, request, *args, **kwargs):
+        if request.query_params.get('confirm') != 'true':
+            return Response(
+                {'detail': "Confirmation requise. Ajoutez ?confirm=true à la requête."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
