@@ -8,3 +8,5 @@ staticfiles/
 *.log
 .idea/
 .vscode/
+
+ml_models/*.joblib

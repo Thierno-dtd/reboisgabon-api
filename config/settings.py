@@ -58,12 +58,14 @@ INSTALLED_APPS = [
     'apps.audit',
     'apps.notifications',
     'apps.exports',
+    'apps.intelligence',
     'django_ratelimit',
 ]
 
 
 RATELIMIT_ENABLE = True
 RATELIMIT_USE_CACHE = 'default'
+ML_MODELS_DIR = BASE_DIR / 'ml_models'
 
 CACHES = {
     "default": {
