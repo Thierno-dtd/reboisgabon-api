@@ -67,15 +67,43 @@ RATELIMIT_ENABLE = True
 RATELIMIT_USE_CACHE = 'default'
 ML_MODELS_DIR = BASE_DIR / 'ml_models'
 
+# ============================================================
+# CACHE
+# ============================================================
+# Redis est désactivé pour le moment (tests en local sans Docker).
+# L'application utilise un cache mémoire local (LocMemCache) :
+# fonctionnellement identique pour le code (mêmes appels cache.get/set),
+# mais non partagé entre plusieurs processus et vidé au redémarrage du serveur.
+#
+# --- POUR RÉACTIVER REDIS ---
+# 1. Décommenter le bloc "CACHES (Redis)" ci-dessous
+# 2. Commenter (ou supprimer) le bloc "CACHES (local, actif)" juste après
+# 3. Lancer le conteneur : docker compose up -d redis
+# 4. Vérifier : python manage.py shell -c "from django.core.cache import cache; cache.set('t','ok',10); print(cache.get('t'))"
+#
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         },
+#         "TIMEOUT": 300,
+#     }
+# }
+# SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+# SESSION_CACHE_ALIAS = 'default'
+
+# --- CACHES (local, actif) ---
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "reboisgabon-cache-local",
+        "TIMEOUT": 300,
     }
 }
+
+SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003']
 
 AUTH_USER_MODEL = 'accounts.User'
 
