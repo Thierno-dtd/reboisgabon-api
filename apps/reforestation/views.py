@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .utils import paginer_liste
 from django.core.cache import cache
+from apps.accounts.permissions import RBACPermission, IsOwnerForAgentOrElevated
 
 from .models import Essence, SiteReboisement, CampagnePlantation, SuiviCroissance
 from .serializers import (
@@ -33,6 +34,9 @@ from .models import ObjectifReboisement
 
 
 class EssenceViewSet(viewsets.ModelViewSet):
+    rbac_resource = 'objectifs'
+    permission_classes = [RBACPermission]
+
     queryset = Essence.objects.all()
     serializer_class = EssenceSerializer
     permission_classes = [IsAuthenticated]
@@ -42,7 +46,8 @@ class EssenceViewSet(viewsets.ModelViewSet):
 
 
 class SiteReboisementViewSet(viewsets.ModelViewSet):
-    """CRUD complet des sites + recherche + filtres combinables."""
+    rbac_resource = 'sites'
+    permission_classes = [RBACPermission]
 
     queryset = SiteReboisement.objects.select_related('responsable').all()
     permission_classes = [IsAuthenticated]
@@ -84,6 +89,9 @@ class SiteReboisementViewSet(viewsets.ModelViewSet):
 
 
 class CampagnePlantationViewSet(viewsets.ModelViewSet):
+    rbac_resource = 'campagnes'
+    permission_classes = [RBACPermission, IsOwnerForAgentOrElevated]
+
     queryset = CampagnePlantation.objects.select_related('site', 'essence', 'responsable').all()
     permission_classes = [IsAuthenticated]
 
@@ -108,6 +116,9 @@ class CampagnePlantationViewSet(viewsets.ModelViewSet):
 
 
 class SuiviCroissanceViewSet(viewsets.ModelViewSet):
+    rbac_resource = 'suivis'
+    permission_classes = [RBACPermission, IsOwnerForAgentOrElevated]
+
     queryset = SuiviCroissance.objects.select_related(
         'campagne', 'campagne__site', 'campagne__essence'
     ).all()
@@ -130,6 +141,9 @@ class SuiviCroissanceViewSet(viewsets.ModelViewSet):
     
 
 class PhotoSuiviViewSet(viewsets.ModelViewSet):
+    rbac_resource = 'suivis'
+    permission_classes = [RBACPermission, IsOwnerForAgentOrElevated]
+
     queryset = PhotoSuivi.objects.select_related('suivi', 'prise_par').all()
     serializer_class = PhotoSuiviSerializer
     permission_classes = [IsAuthenticated]
@@ -142,10 +156,7 @@ class PhotoSuiviViewSet(viewsets.ModelViewSet):
     
 
 class CalendrierSuivisView(APIView):
-    """
-    Vue calendrier : tous les suivis programmés dans les prochains jours.
-    Utile pour un écran 'planning terrain' côté JavaFX.
-    """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -184,10 +195,7 @@ class CalendrierSuivisView(APIView):
 
 
 class SitesGeoJSONView(APIView):
-    """
-    Renvoie tous les sites géolocalisés au format GeoJSON standard —
-    directement exploitable par une carte (Leaflet, Google Maps, etc.)
-    """
+    
     permission_classes = [IsAuthenticated]
 
     @extend_schema(summary="Sites au format GeoJSON pour affichage cartographique", tags=['Sites'])
@@ -220,7 +228,7 @@ class SitesGeoJSONView(APIView):
 
 
 def haversine(lat1, lon1, lat2, lon2):
-    """Distance en km entre deux points GPS (formule de Haversine)."""
+    
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
     dlat = lat2 - lat1
     dlon = lon2 - lon1
@@ -229,10 +237,7 @@ def haversine(lat1, lon1, lat2, lon2):
 
 
 class SitesProximiteView(APIView):
-    """
-    Trouve les sites dans un rayon donné autour d'un point GPS — utile pour
-    un agent terrain qui veut voir "les sites proches de ma position actuelle".
-    """
+    
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -274,7 +279,6 @@ class SitesProximiteView(APIView):
 
 
 class DashboardCarteProvinceView(APIView):
-    """Agrégation géographique enrichie — centroïde par province + statistiques, pour affichage carte-choroplèthe."""
     permission_classes = [IsAuthenticated]
 
     @extend_schema(summary="Statistiques géographiques agrégées par province (pour carte)", tags=['Dashboard'])
@@ -301,6 +305,9 @@ class DashboardCarteProvinceView(APIView):
     destroy=extend_schema(summary="Supprimer un objectif (nécessite ?confirm=true)", tags=['Objectifs']),
 )
 class ObjectifReboisementViewSet(viewsets.ModelViewSet):
+    rbac_resource = 'objectifs'
+    permission_classes = [RBACPermission]
+
     queryset = ObjectifReboisement.objects.select_related('site', 'responsable').all()
     serializer_class = ObjectifReboisementSerializer
     permission_classes = [IsAuthenticated]

@@ -20,6 +20,11 @@ from apps.reforestation.utils import paginer_liste
 from datetime import timedelta
 from apps.reforestation.models import CampagnePlantation, SuiviCroissance
 from django.db.models import Sum, Avg
+from apps.accounts.permissions import RBACAPIViewPermission
+
+
+class DashboardFinancierPermission(RBACAPIViewPermission):
+    resource = 'finances'
 
 class DashboardOverviewView(APIView):
     """
@@ -258,12 +263,7 @@ class DashboardResponsablesView(APIView):
         ])
 
 class DashboardFinancierView(APIView):
-    """
-    Vue financière globale — combien a été investi, par qui, où va l'argent,
-    et le rendement réel (coût par plant survivant). C'est l'écran qui parle
-    directement aux bailleurs et décideurs financiers.
-    """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [DashboardFinancierPermission]
     CACHE_KEY = 'dashboard:financier'
     CACHE_TTL = 180
 

@@ -1,6 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action
+from rest_framework.decorators import APIView, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -10,6 +11,7 @@ from .serializers import (
     UserListSerializer, UserCreateSerializer, UserUpdateSerializer,
     MeUpdateSerializer, ChangePasswordSerializer
 )
+from .rbac import RBAC_MATRIX
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -91,3 +93,28 @@ class MyProfileView(viewsets.ViewSet):
         user.set_password(serializer.validated_data['new_password'])
         user.save()
         return Response({'detail': 'Mot de passe modifié avec succès.'})
+
+from .rbac import RBAC_MATRIX
+
+
+@extend_schema(summary="Permissions RBAC applicables à l'utilisateur connecté", tags=['Authentification'])
+class MesPermissionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.is_superuser or user.is_admin:
+            return Response({
+                'role': user.role,
+                'est_administrateur': True,
+                'matrice_complete': {
+                    ressource: {r: sorted(perms) for r, perms in roles.items()}
+                    for ressource, roles in RBAC_MATRIX.items()
+                },
+            })
+
+        mes_permissions = {
+            ressource: sorted(roles.get(user.role, set()))
+            for ressource, roles in RBAC_MATRIX.items()
+        }
+        return Response({'role': user.role, 'est_administrateur': False, 'permissions': mes_permissions})

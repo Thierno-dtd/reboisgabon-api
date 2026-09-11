@@ -8,20 +8,18 @@ import pyotp
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    """
-    Utilisateur custom : login par email.
-    Deux rôles métier : ADMIN (gère les comptes) et AGENT (utilisateur terrain).
-    """
 
     class Role(models.TextChoices):
         ADMIN = 'ADMIN', 'Administrateur'
+        SUPERVISEUR = 'SUPERVISEUR', 'Superviseur terrain'
         AGENT = 'AGENT', 'Agent de terrain'
+        FINANCIER = 'FINANCIER', 'Financier'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    role = models.CharField(max_length=10, choices=Role.choices, default=Role.AGENT)
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.AGENT)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -56,7 +54,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class PasswordResetToken(models.Model):
-    """Token à usage unique pour la réinitialisation de mot de passe."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reset_tokens')
@@ -76,7 +73,6 @@ class PasswordResetToken(models.Model):
     
 
 class TOTPDevice(models.Model):
-    """Secret TOTP associé à un utilisateur, façon Google Authenticator."""
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='totp_device')
     secret = models.CharField(max_length=32, default=pyotp.random_base32)

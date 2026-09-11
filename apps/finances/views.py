@@ -6,9 +6,13 @@ from rest_framework.response import Response
 from .models import Partenaire, Financement, BudgetCampagne
 from .serializers import PartenaireSerializer, FinancementSerializer, BudgetCampagneSerializer
 from .filters import PartenaireFilter, FinancementFilter
+from apps.accounts.permissions import RBACPermission
 
 
 class PartenaireViewSet(viewsets.ModelViewSet):
+    rbac_resource = 'finances'
+    permission_classes = [RBACPermission]
+
     queryset = Partenaire.objects.all()
     serializer_class = PartenaireSerializer
     permission_classes = [IsAuthenticated]
@@ -28,6 +32,8 @@ class PartenaireViewSet(viewsets.ModelViewSet):
 
 
 class FinancementViewSet(viewsets.ModelViewSet):
+    rbac_resource = 'finances'
+    permission_classes = [RBACPermission]
     queryset = Financement.objects.select_related('partenaire', 'campagne', 'site').all()
     serializer_class = FinancementSerializer
     permission_classes = [IsAuthenticated]
@@ -50,10 +56,8 @@ class FinancementViewSet(viewsets.ModelViewSet):
 
 
 class BudgetCampagneViewSet(viewsets.ModelViewSet):
-    """
-    Pas de création directe : le budget se crée automatiquement à la volée
-    (get_or_create) lors du premier PATCH pour une campagne donnée.
-    """
+    rbac_resource = 'finances'
+    permission_classes = [RBACPermission]
     queryset = BudgetCampagne.objects.select_related('campagne').all()
     serializer_class = BudgetCampagneSerializer
     permission_classes = [IsAuthenticated]

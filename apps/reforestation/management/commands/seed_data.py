@@ -126,6 +126,11 @@ class Command(BaseCommand):
     def _seed_agents(self, n=12):
         agents = []
         used_emails = set()
+        repartition = (
+            ['AGENT'] * 8 + ['SUPERVISEUR'] * 2 + ['FINANCIER'] * 2
+        )
+
+
         for i in range(n):
             prenom = random.choice(PRENOMS)
             nom = random.choice(NOMS)
@@ -134,11 +139,12 @@ class Command(BaseCommand):
                 continue
             used_emails.add(email)
 
+            role = repartition[i % len(repartition)]
             agent, created = User.objects.get_or_create(
                 email=email,
                 defaults={
                     'first_name': prenom, 'last_name': nom,
-                    'role': User.Role.AGENT,
+                    'role': role,
                 }
             )
             if created:

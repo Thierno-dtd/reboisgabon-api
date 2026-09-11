@@ -1,5 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
+
+from apps.accounts.views import MesPermissionsView
 from . import auth_views as views
 
 urlpatterns = [
@@ -13,6 +15,7 @@ urlpatterns = [
     path('2fa/setup/init/', views.TOTPSetupInitView.as_view(), name='2fa-setup-init'),
     path('2fa/setup/confirm/', views.TOTPSetupConfirmView.as_view(), name='2fa-setup-confirm'),
     path('2fa/disable/', views.TOTPDisableView.as_view(), name='2fa-disable'),
+     path('mes-permissions/', MesPermissionsView.as_view(), name='mes-permissions'),
 
     path('me/', views.MeView.as_view(), name='me'),
 ]

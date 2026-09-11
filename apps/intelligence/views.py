@@ -7,7 +7,17 @@ from apps.reforestation.utils import paginer_liste
 
 from .serializers import PredictionSurvieSerializer
 from .ml_service import predire_taux_survie, recommander_essences, entrainer_modele
+from apps.accounts.permissions import RBACAPIViewPermission
+from apps.accounts.rbac import CREATE
 
+
+class IntelligenceViewPermission(RBACAPIViewPermission):
+    resource = 'intelligence'
+
+
+class IntelligenceCreatePermission(RBACAPIViewPermission):
+    resource = 'intelligence'
+    permission_requise = CREATE
 
 @extend_schema(
     summary="Prédit le taux de survie attendu pour une campagne hypothétique",
@@ -15,7 +25,7 @@ from .ml_service import predire_taux_survie, recommander_essences, entrainer_mod
     request=PredictionSurvieSerializer,
 )
 class PredictionSurvieView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IntelligenceCreatePermission]
 
     def post(self, request):
         serializer = PredictionSurvieSerializer(data=request.data)
@@ -49,7 +59,7 @@ class PredictionSurvieView(APIView):
     ]
 )
 class RecommandationEssenceView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IntelligenceCreatePermission]
 
     def get(self, request):
         province = request.query_params.get('province')
@@ -87,7 +97,7 @@ class ReentrainerModeleView(APIView):
 @extend_schema(summary="Détecte les campagnes récentes sans suivi encore à risque prédictif", tags=['Intelligence écologique'])
 class DetectionRisquePredictifView(APIView):
     
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IntelligenceViewPermission]
 
     def get(self, request):
         from apps.reforestation.models import CampagnePlantation
