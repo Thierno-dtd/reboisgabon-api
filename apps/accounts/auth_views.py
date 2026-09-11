@@ -22,6 +22,9 @@ from apps.accounts import serializers
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, OpenApiExample
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from . import serializers as account_serializers
 
 
 def tokens_for_user(user):
@@ -60,7 +63,7 @@ class LoginView(APIView):
                 objet_repr=request.data.get('email', 'inconnu'),
                 adresse_ip=get_current_ip(),
             )
-            raise serializers.ValidationError(serializer.errors)
+            raise ValidationError(serializer.errors)
 
         user = serializer.validated_data['user']
 
