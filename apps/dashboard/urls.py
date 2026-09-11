@@ -3,7 +3,7 @@ from .views import (
     DashboardOverviewView, DashboardParSiteView, DashboardParEssenceView,
     DashboardParProvinceView, DashboardEvolutionTemporelleView,
     DashboardAlertesView, DashboardResponsablesView, DashboardFinancierView,
-    DashboardObjectifsView
+    DashboardObjectifsView, DashboardComparaisonPeriodeView
 )
 from apps.reforestation.views import ClassementScoreEcologiqueView, DashboardCarteProvinceView
 
@@ -22,4 +22,5 @@ urlpatterns += [
     path('carte-provinces/', DashboardCarteProvinceView.as_view(), name='dashboard-carte-provinces'),
     path('objectifs/', DashboardObjectifsView.as_view(), name='dashboard-objectifs'),
     path('scores-ecologiques/', ClassementScoreEcologiqueView.as_view(), name='dashboard-scores-ecologiques'),
+    path('comparaison-periode/', DashboardComparaisonPeriodeView.as_view(), name='dashboard-comparaison'),
 ]

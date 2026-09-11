@@ -326,6 +326,9 @@ reboisgabon-api/
 
 # Réentraînement hebdomadaire du modèle prédictif
 0 3 * * 0 cd /chemin/vers/reboisgabon-api && venv/bin/python manage.py entrainer_ia
+
+# Rapport hebdomadaire automatique (chaque lundi 8h)
+0 8 * * 1 cd /chemin/vers/reboisgabon-api && venv/bin/python manage.py envoyer_rapport_periodique
 ```
 
 ## Checklist de soutenance (10-15 min)

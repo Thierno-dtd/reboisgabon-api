@@ -3,7 +3,7 @@ from multiprocessing.dummy import connection
 from django.db.models import Avg, Count, Sum, Q, F
 from django.db.models.functions import TruncMonth, TruncYear
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -17,7 +17,9 @@ from apps.accounts.models import User
 from apps.finances.models import Partenaire, Financement, BudgetCampagne
 from apps.reforestation.models import ObjectifReboisement
 from apps.reforestation.utils import paginer_liste
-
+from datetime import timedelta
+from apps.reforestation.models import CampagnePlantation, SuiviCroissance
+from django.db.models import Sum, Avg
 
 class DashboardOverviewView(APIView):
     """
@@ -358,4 +360,62 @@ class DashboardObjectifsView(APIView):
             'objectifs_atteints': sum(1 for o in data if o['statut_calcule'] == 'ATTEINT'),
             'objectifs_en_retard': sum(1 for o in data if o['statut_calcule'] == 'NON_ATTEINT'),
             'objectifs': data,
+        })
+
+
+@extend_schema(
+    summary="Compare les indicateurs clés entre deux périodes (mois ou année)",
+    tags=['Dashboard'],
+    parameters=[OpenApiParameter('type', str, description="'mois' ou 'annee' (défaut : mois)")]
+)
+class DashboardComparaisonPeriodeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        type_periode = request.query_params.get('type', 'mois')
+        aujourdhui = timezone.now().date()
+
+        if type_periode == 'annee':
+            debut_actuelle = aujourdhui.replace(month=1, day=1)
+            fin_precedente = debut_actuelle - timedelta(days=1)
+            debut_precedente = debut_actuelle.replace(year=debut_actuelle.year - 1)
+        else:
+            debut_actuelle = aujourdhui.replace(day=1)
+            fin_precedente = debut_actuelle - timedelta(days=1)
+            debut_precedente = fin_precedente.replace(day=1)
+
+        def _metriques(date_debut, date_fin):
+            campagnes = CampagnePlantation.objects.filter(
+                date_plantation__gte=date_debut, date_plantation__lte=date_fin
+            )
+            suivis = SuiviCroissance.objects.filter(
+                date_controle__gte=date_debut, date_controle__lte=date_fin
+            )
+            taux = suivis.aggregate(m=Avg('taux_survie'))['m']
+            return {
+                'nombre_campagnes': campagnes.count(),
+                'total_plants': campagnes.aggregate(t=Sum('nombre_plants'))['t'] or 0,
+                'taux_survie_moyen': round(taux, 2) if taux is not None else None,
+            }
+
+        actuelle = _metriques(debut_actuelle, aujourdhui)
+        precedente = _metriques(debut_precedente, fin_precedente)
+
+        def _evolution(a, b):
+            if not b:
+                return None
+            return round((a - b) / b * 100, 1)
+
+        return Response({
+            'type_periode': type_periode,
+            'periode_actuelle': {'debut': debut_actuelle, 'fin': aujourdhui, **actuelle},
+            'periode_precedente': {'debut': debut_precedente, 'fin': fin_precedente, **precedente},
+            'evolution_pourcentage': {
+                'nombre_campagnes': _evolution(actuelle['nombre_campagnes'], precedente['nombre_campagnes']),
+                'total_plants': _evolution(actuelle['total_plants'], precedente['total_plants']),
+                'taux_survie_moyen': (
+                    _evolution(actuelle['taux_survie_moyen'], precedente['taux_survie_moyen'])
+                    if actuelle['taux_survie_moyen'] and precedente['taux_survie_moyen'] else None
+                ),
+            },
         })
