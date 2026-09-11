@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+from apps.reforestation.utils import paginer_liste
 
 from .serializers import PredictionSurvieSerializer
 from .ml_service import predire_taux_survie, recommander_essences, entrainer_modele
@@ -85,11 +86,7 @@ class ReentrainerModeleView(APIView):
 
 @extend_schema(summary="Détecte les campagnes récentes sans suivi encore à risque prédictif", tags=['Intelligence écologique'])
 class DetectionRisquePredictifView(APIView):
-    """
-    Contrairement à /api/dashboard/alertes/ (qui détecte un risque déjà CONSTATÉ
-    via des suivis réels), cette vue prédit un risque AVANT même le premier
-    contrôle terrain — utile pour prioriser les visites de suivi.
-    """
+    
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -121,5 +118,5 @@ class DetectionRisquePredictifView(APIView):
 
         return Response({
             'nombre_campagnes_a_risque_predit': len(resultats),
-            'campagnes': sorted(resultats, key=lambda x: x['taux_survie_predit']),
+            'campagnes': paginer_liste(request, sorted(resultats, key=lambda x: x['taux_survie_predit'])),
         })

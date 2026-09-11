@@ -21,6 +21,7 @@ from apps.audit.middleware import get_current_ip
 from apps.accounts import serializers
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
+from drf_spectacular.utils import extend_schema, OpenApiExample
 
 
 def tokens_for_user(user):
@@ -173,8 +174,15 @@ class ResetPasswordView(APIView):
         return Response({'detail': 'Mot de passe réinitialisé avec succès.'})
 
 
+@extend_schema(
+    summary="Initialise la 2FA — génère le secret TOTP",
+    tags=['Authentification'],
+    responses={200: OpenApiExample(
+        'Secret généré',
+        value={'secret': 'JBSWY3DPEHPK3PXP', 'provisioning_uri': 'otpauth://totp/ReboisGabon:admin@reboisgabon.ga?secret=...&issuer=ReboisGabon'}
+    )}
+)
 class TOTPSetupInitView(APIView):
-    """Génère (ou régénère) le secret TOTP et renvoie l'URI de provisioning (QR code)."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -185,8 +193,13 @@ class TOTPSetupInitView(APIView):
         })
 
 
+@extend_schema(
+    summary="Confirme l'activation de la 2FA (après scan du QR code)",
+    tags=['Authentification'],
+    request=TOTPSetupSerializer,
+    examples=[OpenApiExample('Exemple', value={'otp_code': '123456'}, request_only=True)],
+)
 class TOTPSetupConfirmView(APIView):
-    """Confirme l'activation de la 2FA après scan du QR code et saisie du 1er code."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -210,6 +223,7 @@ class TOTPSetupConfirmView(APIView):
         return Response({'detail': '2FA activée avec succès.'})
 
 
+@extend_schema(summary="Désactive la 2FA du compte connecté", tags=['Authentification'])
 class TOTPDisableView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -220,7 +234,24 @@ class TOTPDisableView(APIView):
         return Response({'detail': '2FA désactivée.'})
 
 
+@extend_schema(
+    summary="Profil de l'utilisateur connecté",
+    tags=['Authentification'],
+    responses={200: OpenApiExample(
+        'Profil',
+        value={'id': 'uuid', 'email': 'admin@reboisgabon.ga', 'first_name': 'Admin',
+               'last_name': 'ReboisGabon', 'role': 'ADMIN', 'two_fa_enabled': True}
+    )}
+)
 class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        u = request.user
+        return Response({
+            'id': str(u.id), 'email': u.email, 'first_name': u.first_name,
+            'last_name': u.last_name, 'role': u.role, 'two_fa_enabled': u.two_fa_enabled,
+        })
     """Infos du user connecté — pratique pour le client JavaFX après login."""
     permission_classes = [IsAuthenticated]
 

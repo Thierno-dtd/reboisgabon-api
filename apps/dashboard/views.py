@@ -16,6 +16,7 @@ from apps.reforestation.models import SiteReboisement, CampagnePlantation, Suivi
 from apps.accounts.models import User
 from apps.finances.models import Partenaire, Financement, BudgetCampagne
 from apps.reforestation.models import ObjectifReboisement
+from apps.reforestation.utils import paginer_liste
 
 
 class DashboardOverviewView(APIView):
@@ -94,7 +95,7 @@ class DashboardParSiteView(APIView):
         return Response({
             'top_5_meilleurs_sites': data[:5],
             'top_5_sites_a_risque': list(reversed(data[-5:])) if len(data) > 5 else list(reversed(data)),
-            'classement_complet': data,
+            'classement_complet': paginer_liste(request, data),
         })
 
 
@@ -195,11 +196,7 @@ class DashboardEvolutionTemporelleView(APIView):
 
 
 class DashboardAlertesView(APIView):
-    """
-    Signaux d'alerte automatiques : sites/campagnes sous un seuil critique de survie,
-    ou sans suivi récent. Argument de vente fort pour un jury : l'API ne fait pas
-    que restituer des données, elle aide à la décision.
-    """
+
     permission_classes = [IsAuthenticated]
 
     SEUIL_CRITIQUE = 50.0  # % taux de survie
@@ -220,26 +217,17 @@ class DashboardAlertesView(APIView):
 
         return Response({
             'seuil_critique_pourcent': self.SEUIL_CRITIQUE,
-            'campagnes_taux_critique': [
-                {
-                    'id': c.id,
-                    'site': c.site.nom,
-                    'essence': c.essence.nom,
-                    'date_plantation': c.date_plantation,
-                    'taux_survie_moyen': round(c.taux_moyen, 2),
-                }
+            'campagnes_taux_critique': paginer_liste(request, [
+                {'id': c.id, 'site': c.site.nom, 'essence': c.essence.nom,
+                 'date_plantation': c.date_plantation, 'taux_survie_moyen': round(c.taux_moyen, 2)}
                 for c in campagnes_critiques
-            ],
-            'campagnes_sans_suivi_recent': [
-                {
-                    'id': c.id,
-                    'site': c.site.nom,
-                    'essence': c.essence.nom,
-                    'date_plantation': c.date_plantation,
-                    'jours_depuis_derniere_activite': (timezone.now().date() - c.date_plantation).days,
-                }
+            ], param='page_critiques'),
+            'campagnes_sans_suivi_recent': paginer_liste(request, [
+                {'id': c.id, 'site': c.site.nom, 'essence': c.essence.nom,
+                 'date_plantation': c.date_plantation,
+                 'jours_depuis_derniere_activite': (timezone.now().date() - c.date_plantation).days}
                 for c in campagnes_sans_suivi_recent
-            ],
+            ], param='page_sans_suivi'),
         })
 
 

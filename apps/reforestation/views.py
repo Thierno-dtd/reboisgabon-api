@@ -9,6 +9,8 @@ from .scoring import calculer_score_ecologique
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from .utils import paginer_liste
+from django.core.cache import cache
 
 from .models import Essence, SiteReboisement, CampagnePlantation, SuiviCroissance
 from .serializers import (
@@ -176,8 +178,8 @@ class CalendrierSuivisView(APIView):
 
         return Response({
             'horizon_jours': horizon_jours,
-            'suivis_a_venir': serialize(suivis_programmes),
-            'suivis_en_retard': serialize(en_retard),
+            'suivis_a_venir': paginer_liste(request, serialize(suivis_programmes), param='page_a_venir'),
+            'suivis_en_retard': paginer_liste(request, serialize(en_retard), param='page_en_retard'),
         })
 
 
@@ -265,7 +267,10 @@ class SitesProximiteView(APIView):
                 })
 
         resultats.sort(key=lambda x: x['distance_km'])
-        return Response({'rayon_km': rayon_km, 'nombre_sites_trouves': len(resultats), 'sites': resultats})
+        return Response({
+            'rayon_km': rayon_km,
+            'sites': paginer_liste(request, resultats),
+        })
 
 
 class DashboardCarteProvinceView(APIView):
@@ -340,28 +345,28 @@ class ClassementScoreEcologiqueView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from django.core.cache import cache
-
+        
         cache_key = 'dashboard:scores_ecologiques'
         cached = cache.get(cache_key)
-        if cached is not None:
-            return Response(cached)
+        if cached is None:
+            sites = SiteReboisement.objects.all()
+            classement = []
+            for site in sites:
+                resultat = calculer_score_ecologique(site)
+                classement.append({
+                    'id': site.id, 'nom': site.nom, 'localite': site.localite,
+                    'score_global': resultat['score_global'], 'classe': resultat['classe'],
+                })
+            classement.sort(key=lambda x: x['score_global'], reverse=True)
+            cached = {
+                'classement': classement,
+                'score_moyen_national': round(
+                    sum(c['score_global'] for c in classement) / len(classement), 1
+                ) if classement else None,
+            }
+            cache.set(cache_key, cached, 180)
 
-        sites = SiteReboisement.objects.all()
-        classement = []
-        for site in sites:
-            resultat = calculer_score_ecologique(site)
-            classement.append({
-                'id': site.id, 'nom': site.nom, 'localite': site.localite,
-                'score_global': resultat['score_global'], 'classe': resultat['classe'],
-            })
-
-        classement.sort(key=lambda x: x['score_global'], reverse=True)
-        data = {
-            'classement': classement,
-            'score_moyen_national': round(
-                sum(c['score_global'] for c in classement) / len(classement), 1
-            ) if classement else None,
-        }
-        cache.set(cache_key, data, 180)
-        return Response(data)
+        return Response({
+            'score_moyen_national': cached['score_moyen_national'],
+            'classement': paginer_liste(request, cached['classement']),
+        })
