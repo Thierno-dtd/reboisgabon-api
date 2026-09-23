@@ -117,6 +117,7 @@ class BudgetCampagne(models.Model):
         db_table = 'budgets_campagne'
         verbose_name = 'Budget de campagne'
         verbose_name_plural = 'Budgets de campagne'
+        ordering = ['-updated_at']
 
     def __str__(self):
         return f"Budget {self.campagne} — {self.cout_reel}/{self.budget_alloue} {self.devise}"

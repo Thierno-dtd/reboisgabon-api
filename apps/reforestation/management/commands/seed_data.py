@@ -5,6 +5,11 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
+from io import BytesIO
+from PIL import Image, ImageDraw
+from django.core.files.base import ContentFile
+from apps.accounts.models import PasswordResetToken, TOTPDevice
+from apps.reforestation.models import PhotoSuivi
 
 from apps.accounts.models import User
 from apps.reforestation.models import Essence, SiteReboisement, CampagnePlantation, SuiviCroissance
@@ -99,6 +104,9 @@ class Command(BaseCommand):
         self._seed_budgets(campagnes)
         self._seed_suivis(campagnes, agents)
         self._seed_objectifs(sites)
+        compte_2fa = self._seed_compte_demo_2fa()
+        self._seed_password_reset_tokens(admin)
+        self._seed_photos_suivi()
 
         self.stdout.write(self.style.SUCCESS(
             f"\nSeed terminé :\n"
@@ -109,6 +117,10 @@ class Command(BaseCommand):
             f"  - {len(campagnes)} campagnes\n"
             f"  - {SuiviCroissance.objects.count()} suivis de croissance\n"
         ))
+
+        from apps.notifications.management.commands.check_alertes import Command as CheckAlertesCommand
+        self.stdout.write("\nGénération des notifications d'alerte...")
+        CheckAlertesCommand().handle()
 
     def _seed_admin(self):
         admin, created = User.objects.get_or_create(
@@ -232,22 +244,41 @@ class Command(BaseCommand):
             base += self.FACTEUR_ESSENCE.get(campagne.essence.nom, 0)
             base += self.FACTEUR_PROVINCE.get(campagne.site.province, 0)
             base += 5 if campagne.essence.croissance_rapide else 0
-            base += random.uniform(-6, 6)  # bruit résiduel, mais plus faible que l'ancien tirage 100% aléatoire
+            base += random.uniform(-6, 6)
+
             taux_base = max(20, min(95, base))
 
             taux_courant = 100.0
             date_courante = campagne.date_plantation
 
             for c in range(nb_controles):
-                date_courante = date_courante + timedelta(days=random.randint(45, 75))
+                date_courante = date_courante + timedelta(
+                    days=random.randint(45, 75)
+                )
+
                 if date_courante > today:
                     break
 
                 decroissance = (100 - taux_base) / max(nb_controles, 1)
-                taux_courant = max(0, taux_courant - decroissance + random.uniform(-3, 3))
+
+                taux_courant = max(
+                    0,
+                    taux_courant - decroissance + random.uniform(-3, 3)
+                )
+
                 taux_courant = min(100, taux_courant)
 
-                nombre_vivants = int(campagne.nombre_plants * (taux_courant / 100))
+                nombre_vivants = int(
+                    campagne.nombre_plants * (taux_courant / 100)
+                )
+
+                # Par défaut, aucun prochain contrôle n'est planifié.
+                prochaine_date = None
+
+                # Dans 50 % des cas, on planifie un prochain contrôle.
+                if random.random() < 0.5:
+                    offset = random.randint(-15, 45)
+                    prochaine_date = today + timedelta(days=offset)
 
                 SuiviCroissance.objects.create(
                     campagne=campagne,
@@ -256,6 +287,7 @@ class Command(BaseCommand):
                     nombre_plants_vivants=nombre_vivants,
                     observations=random.choice(OBSERVATIONS),
                     controle_par=random.choice(agents),
+                    prochaine_date_controle=prochaine_date,
                 )
     
     def _seed_partenaires(self):
@@ -306,6 +338,77 @@ class Command(BaseCommand):
                     'cout_reel': round(cout_reel, 2),
                     'devise': 'XAF',
                 }
+            )
+
+    def _seed_compte_demo_2fa(self):
+        """
+        Compte dédié aux tests de 2FA — séparé de l'admin pour que la démo
+        de login rapide (module 2) reste simple, et que ce compte serve
+        spécifiquement à démontrer le flux complet 2FA.
+        """
+        user, created = User.objects.get_or_create(
+            email='demo2fa@reboisgabon.ga',
+            defaults={'first_name': 'Demo', 'last_name': '2FA', 'role': User.Role.SUPERVISEUR}
+        )
+        if created:
+            user.set_password('Demo2fa@123')
+            user.save()
+
+        device, _ = TOTPDevice.objects.get_or_create(user=user)
+        device.confirmed = True
+        device.save()
+        user.two_fa_enabled = True
+        user.save()
+
+        self.stdout.write(self.style.WARNING(
+            f"\n>>> Compte 2FA de démo : demo2fa@reboisgabon.ga / Demo2fa@123\n"
+            f">>> Secret TOTP à ajouter dans Google Authenticator AVANT la démo :\n"
+            f">>> {device.secret}\n"
+        ))
+        return user
+
+    def _seed_password_reset_tokens(self, admin):
+        import secrets
+        from datetime import timedelta
+
+        # Token valide (non utilisé, non expiré) — visible en base pour vérification
+        PasswordResetToken.objects.get_or_create(
+            user=admin, token=secrets.token_urlsafe(48),
+            defaults={'expires_at': timezone.now() + timedelta(hours=1), 'used': False}
+        )
+        # Token déjà utilisé — pour vérifier que la table reflète bien l'historique
+        PasswordResetToken.objects.get_or_create(
+            user=admin, token=secrets.token_urlsafe(48),
+            defaults={'expires_at': timezone.now() - timedelta(hours=2), 'used': True}
+        )
+
+    def _seed_photos_suivi(self, nb_photos=25):
+        """
+        Génère des images placeholder (via Pillow, déjà une dépendance du
+        projet) pour peupler la table PhotoSuivi sans dépendre de vraies
+        photos externes — suffisant pour tester l'upload, l'affichage et
+        les filtres du module Photos.
+        """
+        suivis_cibles = list(SuiviCroissance.objects.order_by('?')[:nb_photos])
+        couleurs = ['#2E7D32', '#558B2F', '#33691E', '#1B5E20', '#43A047']
+
+        for suivi in suivis_cibles:
+            img = Image.new('RGB', (640, 480), color=random.choice(couleurs))
+            draw = ImageDraw.Draw(img)
+            texte = f"{suivi.campagne.site.nom}\n{suivi.date_controle}"
+            draw.text((20, 20), texte, fill='white')
+
+            buffer = BytesIO()
+            img.save(buffer, format='JPEG')
+            buffer.seek(0)
+
+            photo = PhotoSuivi(
+                suivi=suivi,
+                legende=f"Contrôle terrain du {suivi.date_controle}",
+                prise_par=suivi.controle_par,
+            )
+            photo.image.save(
+                f"photo_{suivi.id}.jpg", ContentFile(buffer.read()), save=True
             )
 
     def _seed_objectifs(self, sites):
