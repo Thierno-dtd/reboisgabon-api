@@ -10,6 +10,8 @@ from PIL import Image, ImageDraw
 from django.core.files.base import ContentFile
 from apps.accounts.models import PasswordResetToken, TOTPDevice
 from apps.reforestation.models import PhotoSuivi
+from apps.reforestation.utils import coordonnees_pour
+from apps.reforestation.management.commands.harmoniser_donnees_demo import email_demo, Command as HarmoniserCommand
 
 from apps.accounts.models import User
 from apps.reforestation.models import Essence, SiteReboisement, CampagnePlantation, SuiviCroissance
@@ -33,12 +35,12 @@ PROVINCES_GABON = [
 
 LOCALITES = [
     ("Libreville", "Estuaire"), ("Kango", "Estuaire"), ("Ntoum", "Estuaire"),
-    ("Franceville", "Haut-Ogooué"), ("Moanda", "Haut-Ogooué"), ("Lastoursville", "Haut-Ogooué"),
+    ("Franceville", "Haut-Ogooué"), ("Moanda", "Haut-Ogooué"), ("Lastoursville", "Ogooué-Lolo"),
     ("Lambaréné", "Moyen-Ogooué"), ("Ndjolé", "Moyen-Ogooué"),
     ("Mouila", "Ngounié"), ("Fougamou", "Ngounié"),
     ("Tchibanga", "Nyanga"), ("Mayumba", "Nyanga"),
     ("Makokou", "Ogooué-Ivindo"), ("Booué", "Ogooué-Ivindo"),
-    ("Koulamoutou", "Ogooué-Lolo"), ("Lopé", "Ogooué-Lolo"),
+    ("Koulamoutou", "Ogooué-Lolo"), ("Lopé", "Ogooué-Ivindo"),
     ("Port-Gentil", "Ogooué-Maritime"), ("Omboué", "Ogooué-Maritime"),
     ("Oyem", "Woleu-Ntem"), ("Bitam", "Woleu-Ntem"), ("Minvoul", "Woleu-Ntem"),
 ]
@@ -121,6 +123,7 @@ class Command(BaseCommand):
         from apps.notifications.management.commands.check_alertes import Command as CheckAlertesCommand
         self.stdout.write("\nGénération des notifications d'alerte...")
         CheckAlertesCommand().handle()
+        HarmoniserCommand().handle()
 
     def _seed_admin(self):
         admin, created = User.objects.get_or_create(
@@ -146,10 +149,7 @@ class Command(BaseCommand):
         for i in range(n):
             prenom = random.choice(PRENOMS)
             nom = random.choice(NOMS)
-            email = f"{prenom.lower()}.{nom.lower()}{i}@reboisgabon.ga"
-            if email in used_emails:
-                continue
-            used_emails.add(email)
+            email = email_demo(prenom, nom, used_emails)
 
             role = repartition[i % len(repartition)]
             agent, created = User.objects.get_or_create(
@@ -183,14 +183,15 @@ class Command(BaseCommand):
             prefixe = random.choice(SITE_PREFIXES)
             nom = f"{prefixe} {localite} {['Nord', 'Sud', 'Est', 'Ouest', ''][i % 5]}".strip()
 
+            latitude, longitude = coordonnees_pour(localite, province, random)
             site = SiteReboisement.objects.create(
                 nom=nom,
                 localite=localite,
                 province=province,
                 superficie_hectares=Decimal(random.uniform(15, 400)).quantize(Decimal('0.01')),
                 statut=random.choices(statuts, weights=[15, 45, 30, 10])[0],
-                latitude=Decimal(random.uniform(-3.9, 2.3)).quantize(Decimal('0.000001')),
-                longitude=Decimal(random.uniform(8.7, 14.5)).quantize(Decimal('0.000001')),
+                latitude=Decimal(str(latitude)),
+                longitude=Decimal(str(longitude)),
                 responsable=random.choice(agents),
             )
             sites.append(site)
@@ -202,6 +203,8 @@ class Command(BaseCommand):
         start_range = today - timedelta(days=730)  # 2 ans d'historique
 
         for site in sites:
+            if site.statut == SiteReboisement.Statut.PLANIFIE:
+                continue
             nb = random.randint(min_par_site, max_par_site)
             for _ in range(nb):
                 jours_offset = random.randint(0, 730)

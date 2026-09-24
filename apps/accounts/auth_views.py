@@ -142,8 +142,10 @@ class ForgotPasswordView(APIView):
         reset_link = f"{settings.FRONTEND_RESET_URL}?token={token}"
         send_mail(
             subject="ReboisGabon — Réinitialisation de mot de passe",
-            message=f"Bonjour {user.first_name},\n\nCliquez sur ce lien pour réinitialiser votre mot de passe "
-                    f"(valable 1h) :\n{reset_link}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
+            message=f"Bonjour {user.first_name},\n\nVoici votre code de réinitialisation ReboisGabon "
+                    f"(valable 1h, utilisable une seule fois) :\n\n{token}\n\n"
+                    f"Collez-le dans l'écran « Nouveau mot de passe » de l'application, ou ouvrez ce lien :\n{reset_link}\n\n"
+                    f"Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
         )

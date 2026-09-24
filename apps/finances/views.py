@@ -15,7 +15,6 @@ class PartenaireViewSet(viewsets.ModelViewSet):
 
     queryset = Partenaire.objects.all()
     serializer_class = PartenaireSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = PartenaireFilter
     search_fields = ['nom', 'pays', 'contact_email']
@@ -36,7 +35,6 @@ class FinancementViewSet(viewsets.ModelViewSet):
     permission_classes = [RBACPermission]
     queryset = Financement.objects.select_related('partenaire', 'campagne', 'site').all()
     serializer_class = FinancementSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = FinancementFilter
     search_fields = ['reference', 'description', 'partenaire__nom']
@@ -60,7 +58,6 @@ class BudgetCampagneViewSet(viewsets.ModelViewSet):
     permission_classes = [RBACPermission]
     queryset = BudgetCampagne.objects.select_related('campagne').all()
     serializer_class = BudgetCampagneSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['campagne']
 

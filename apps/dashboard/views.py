@@ -150,14 +150,8 @@ class DashboardParProvinceView(APIView):
         if cached is not None:
             return Response(cached)
 
-        provinces = SiteReboisement.objects.exclude(province='').values('province').annotate(
-            nb_sites=Count('id', distinct=True),
-            superficie_totale=Sum('superficie_hectares'),
-            taux_moyen=Avg('campagnes__suivis__taux_survie'),
-            total_plants=Sum('campagnes__nombre_plants'),
-        ).order_by('-nb_sites')
-
-        data = list(provinces)
+        from apps.reforestation.utils import statistiques_provinces
+        data = statistiques_provinces()
         cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
 
         return Response(data)

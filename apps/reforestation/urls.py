@@ -20,5 +20,3 @@ urlpatterns += [
     path('sites-proximite/', SitesProximiteView.as_view(), name='sites-proximite'),
     path('sites/<uuid:pk>/score-ecologique/', ScoreEcologiqueSiteView.as_view(), name='site-score-ecologique'),
 ]
-
-urlpatterns = router.urls

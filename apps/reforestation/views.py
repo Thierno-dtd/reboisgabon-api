@@ -34,12 +34,11 @@ from .models import ObjectifReboisement
 
 
 class EssenceViewSet(viewsets.ModelViewSet):
-    rbac_resource = 'objectifs'
+    rbac_resource = 'essences'
     permission_classes = [RBACPermission]
 
     queryset = Essence.objects.all()
     serializer_class = EssenceSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nom', 'nom_scientifique']
     ordering_fields = ['nom']
@@ -50,7 +49,6 @@ class SiteReboisementViewSet(viewsets.ModelViewSet):
     permission_classes = [RBACPermission]
 
     queryset = SiteReboisement.objects.select_related('responsable').all()
-    permission_classes = [IsAuthenticated]
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = SiteReboisementFilter
@@ -93,7 +91,6 @@ class CampagnePlantationViewSet(viewsets.ModelViewSet):
     permission_classes = [RBACPermission, IsOwnerForAgentOrElevated]
 
     queryset = CampagnePlantation.objects.select_related('site', 'essence', 'responsable').all()
-    permission_classes = [IsAuthenticated]
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = CampagnePlantationFilter
@@ -123,7 +120,6 @@ class SuiviCroissanceViewSet(viewsets.ModelViewSet):
         'campagne', 'campagne__site', 'campagne__essence'
     ).all()
     serializer_class = SuiviCroissanceSerializer
-    permission_classes = [IsAuthenticated]
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = SuiviCroissanceFilter
@@ -146,7 +142,6 @@ class PhotoSuiviViewSet(viewsets.ModelViewSet):
 
     queryset = PhotoSuivi.objects.select_related('suivi', 'prise_par').all()
     serializer_class = PhotoSuiviSerializer
-    permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['suivi']
@@ -283,17 +278,8 @@ class DashboardCarteProvinceView(APIView):
 
     @extend_schema(summary="Statistiques géographiques agrégées par province (pour carte)", tags=['Dashboard'])
     def get(self, request):
-        from django.db.models import Avg, Count, Sum
-
-        provinces = SiteReboisement.objects.exclude(province='').values('province').annotate(
-            nb_sites=Count('id'),
-            latitude_moyenne=Avg('latitude'),
-            longitude_moyenne=Avg('longitude'),
-            superficie_totale=Sum('superficie_hectares'),
-            taux_survie_moyen=Avg('campagnes__suivis__taux_survie'),
-        ).order_by('-nb_sites')
-
-        return Response(list(provinces))
+        from .utils import statistiques_provinces
+        return Response(statistiques_provinces())
 
 
 @extend_schema_view(
@@ -310,7 +296,6 @@ class ObjectifReboisementViewSet(viewsets.ModelViewSet):
 
     queryset = ObjectifReboisement.objects.select_related('site', 'responsable').all()
     serializer_class = ObjectifReboisementSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ObjectifReboisementFilter
     search_fields = ['titre', 'description', 'province']

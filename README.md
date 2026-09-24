@@ -78,6 +78,13 @@ Le seed génère automatiquement :
 - 7 partenaires/bailleurs avec financements et budgets associés
 - Plusieurs objectifs de reboisement (national, par province, par site)
 
+Sur une base existante créée avec une ancienne version du seed, replacez les sites
+sur la province réelle de leur localité (la carte du client en dépend) :
+
+```bash
+python manage.py recaler_coordonnees_sites
+```
+
 ### 5. Lancer le serveur
 
 ```bash

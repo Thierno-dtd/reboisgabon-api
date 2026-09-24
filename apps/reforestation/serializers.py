@@ -142,6 +142,21 @@ class ObjectifReboisementSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def validate(self, attrs):
+        instance = self.instance
+        portee = attrs.get('portee', instance.portee if instance else ObjectifReboisement.Portee.GLOBAL)
+        site = attrs.get('site', instance.site if instance else None)
+        province = attrs.get('province', instance.province if instance else '')
+        date_debut = attrs.get('date_debut', instance.date_debut if instance else None)
+        date_echeance = attrs.get('date_echeance', instance.date_echeance if instance else None)
+        if portee == ObjectifReboisement.Portee.SITE and not site:
+            raise serializers.ValidationError({'site': "Un objectif de portée « Site » doit référencer un site."})
+        if portee == ObjectifReboisement.Portee.PROVINCE and not province:
+            raise serializers.ValidationError({'province': "Un objectif de portée « Province » doit préciser la province."})
+        if date_debut and date_echeance and date_echeance < date_debut:
+            raise serializers.ValidationError({'date_echeance': "L'échéance ne peut pas précéder la date de début."})
+        return attrs
+
     def get_plants_realises(self, obj):
         return obj.plants_realises
 
