@@ -48,9 +48,10 @@ class Command(BaseCommand):
             filtre_tests |= Q(objet_repr__icontains=motif)
         purges, _ = JournalActivite.objects.filter(filtre_tests).delete()
 
-        deja_pris = set(User.objects.filter(is_superuser=True).values_list('email', flat=True))
+        deja_pris = set(User.objects.values_list('email', flat=True).filter(Q(is_superuser=True) | ~Q(email__endswith='@reboisgabon.ga') | Q(email='demo2fa@reboisgabon.ga')))
         emails = 0
-        for utilisateur in User.objects.filter(is_superuser=False).order_by('date_joined', 'last_name'):
+        comptes_fixes = {'demo2fa@reboisgabon.ga', 'demo.2fa@reboisgabon.ga'}
+        for utilisateur in User.objects.filter(is_superuser=False, email__endswith='@reboisgabon.ga').exclude(email__in=comptes_fixes).order_by('date_joined', 'last_name'):
             nouvel_email = email_demo(utilisateur.first_name, utilisateur.last_name, deja_pris)
             if nouvel_email != utilisateur.email:
                 utilisateur.email = nouvel_email

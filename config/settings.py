@@ -144,15 +144,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
+"""DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+"""
 
 
-"""DATABASES = {
+DATABASES = {
    'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME'),
@@ -162,7 +163,7 @@ DATABASES = {
         'PORT': config('DB_PORT', default='5432'),
     }
 }
-"""
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -207,13 +208,13 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # en dev
-# En prod: 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-EMAIL_USE_TLS = True
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_TIMEOUT = 5
 FRONTEND_RESET_URL = config('FRONTEND_RESET_URL', default='http://localhost:8080/reset-password')
 DEFAULT_FROM_EMAIL = 'noreply@reboisgabon.ga'
 

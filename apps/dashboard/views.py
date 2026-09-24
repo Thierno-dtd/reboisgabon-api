@@ -1,6 +1,6 @@
 from datetime import timedelta
 from multiprocessing.dummy import connection
-from django.db.models import Avg, Count, Sum, Q, F
+from django.db.models import Avg, Count, Sum, Q, F, OuterRef, Subquery, IntegerField
 from django.db.models.functions import TruncMonth, TruncYear
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -75,30 +75,32 @@ class DashboardParSiteView(APIView):
     CACHE_TTL = 180
 
     def get(self, request):
-        cached = cache.get(self.CACHE_KEY)
-        if cached is not None:
-            return Response(cached)
-        
-        sites = SiteReboisement.objects.annotate(
-            taux_moyen=Avg('campagnes__suivis__taux_survie'),
-            nb_campagnes=Count('campagnes', distinct=True),
-            total_plants=Sum('campagnes__nombre_plants'),
-        ).filter(taux_moyen__isnull=False).order_by('-taux_moyen')
-
-        data = [
-            {
-                'id': s.id,
-                'nom': s.nom,
-                'localite': s.localite,
-                'province': s.province,
-                'statut': s.statut,
-                'taux_survie_moyen': round(s.taux_moyen, 2),
-                'nombre_campagnes': s.nb_campagnes,
-                'total_plants': s.total_plants or 0,
-            }
-            for s in sites
-        ]
-        cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
+        data = cache.get(self.CACHE_KEY)
+        if data is None:
+            from django.db.models import OuterRef, Subquery, IntegerField
+            plants = CampagnePlantation.objects.filter(site=OuterRef('pk')).values('site').annotate(
+                total=Sum('nombre_plants')).values('total')
+            campagnes = CampagnePlantation.objects.filter(site=OuterRef('pk')).values('site').annotate(
+                n=Count('id')).values('n')
+            sites = SiteReboisement.objects.annotate(
+                taux_moyen=Avg('campagnes__suivis__taux_survie'),
+                nb_campagnes=Subquery(campagnes, output_field=IntegerField()),
+                total_plants=Subquery(plants, output_field=IntegerField()),
+            ).filter(taux_moyen__isnull=False).order_by('-taux_moyen')
+            data = [
+                {
+                    'id': s.id,
+                    'nom': s.nom,
+                    'localite': s.localite,
+                    'province': s.province,
+                    'statut': s.statut,
+                    'taux_survie_moyen': round(s.taux_moyen, 2),
+                    'nombre_campagnes': s.nb_campagnes or 0,
+                    'total_plants': s.total_plants or 0,
+                }
+                for s in sites
+            ]
+            cache.set(self.CACHE_KEY, data, self.CACHE_TTL)
         return Response({
             'top_5_meilleurs_sites': data[:5],
             'top_5_sites_a_risque': list(reversed(data[-5:])) if len(data) > 5 else list(reversed(data)),
@@ -117,10 +119,13 @@ class DashboardParEssenceView(APIView):
         if cached is not None:
             return Response(cached)
     
+        from django.db.models import OuterRef, Subquery, IntegerField
+        plants = CampagnePlantation.objects.filter(essence=OuterRef('pk')).values('essence').annotate(
+            total=Sum('nombre_plants')).values('total')
         essences = Essence.objects.annotate(
             taux_moyen=Avg('campagnes__suivis__taux_survie'),
             nb_campagnes=Count('campagnes', distinct=True),
-            total_plants=Sum('campagnes__nombre_plants'),
+            total_plants=Subquery(plants, output_field=IntegerField()),
         ).order_by('-taux_moyen')
 
         data = [
@@ -241,7 +246,8 @@ class DashboardResponsablesView(APIView):
             campagnes_creees__isnull=False
         ).annotate(
             nb_campagnes=Count('campagnes_creees', distinct=True),
-            total_plants=Sum('campagnes_creees__nombre_plants'),
+            total_plants=Subquery(CampagnePlantation.objects.filter(responsable=OuterRef('pk')).values('responsable').annotate(
+                total=Sum('nombre_plants')).values('total'), output_field=IntegerField()),
             taux_moyen=Avg('campagnes_creees__suivis__taux_survie'),
         ).distinct().order_by('-nb_campagnes')
 
